@@ -1,9 +1,9 @@
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 import cv2
-# from ultralytics import YOLO
+from ultralytics import YOLO
 import numpy as np
-# from ultralytics.trackers.byte_tracker import BYTETracker
+from ultralytics.trackers.byte_tracker import BYTETracker
 import threading
 import json
 from types import SimpleNamespace
@@ -305,7 +305,7 @@ args = SimpleNamespace(
     match_thresh=0.8,
     fuse_score=True
 )
-# tracker = BYTETracker(args, frame_rate=30)
+tracker = BYTETracker(args, frame_rate=30)
 
 
 process_thread_f = None
@@ -455,8 +455,8 @@ def make_fake_yolo_results(dets: np.ndarray):
     return FakeResults(xyxy, conf, cls)
 
 
-# model_path = "yolov8s.pt"
-# model_yolo = YOLO(model_path)
+model_path = "yolov8s.pt"
+model_yolo = YOLO(model_path)
 
 bg_sub = cv2.createBackgroundSubtractorMOG2(
     history=500, varThreshold=25, detectShadows=True
