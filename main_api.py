@@ -232,7 +232,7 @@ def save_data(full_frame1, full_frame2, obj, BUFFER_full,BUFFER_full_2, BUFFER_o
         base_dir = os.path.join(
             SAVE_BASE,
             now.strftime("%Y-%m-%d"),
-            class_name,
+            str(class_name),
             f"track_{track_id}",
             event_type
         )
@@ -609,6 +609,7 @@ backup  = []
 
 def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     global stop_flag
+    global backup
 
     
     cap_rgb = cv2.VideoCapture(rtsp_RGB)
@@ -645,6 +646,13 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         final_results = merge_motion_into_yolo(yolo_results, tracks)
         print("final_results :",final_results)
         if len(final_results) > 0 :
+            # send events
+            data_event = process_data(final_results)
+            backup = data_event + backup
+
+            STATIC_DATA = {"len" : len(data_event) , "data" : data_event}
+            print(STATIC_DATA)
+            convert_and_send(STATIC_DATA)
             
             # save events 
             for object in final_results:
@@ -666,12 +674,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
 
                 save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
 
-            # send events
-            data_event = process_data(final_results)
-            backup = data_event + backup
-
-            STATIC_DATA = {"len" : len(data_event) , "data" : data_event}
-            convert_and_send(STATIC_DATA)
+            
 
     cap_rgb.release()
     cap_ther.release()
@@ -714,6 +717,7 @@ class TrackRequest(BaseModel):
 @app.post("/track/object")
 async def track_object(request: TrackRequest):
     # try:
+        global backup
         print(request)
         for obj in backup:
             if obj["id"] == request.id:
