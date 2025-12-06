@@ -653,7 +653,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 if key not in BUFFER_obj:
                     BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
 
-                box = map( int , object["bbox"])
+                box = object["bbox"] #map(int , object["bbox"])
                 print("box :",box)
                 cropped_rgb = crop(frame_rgb,box)
                 cropped_ther = crop(frame_ther,box)
