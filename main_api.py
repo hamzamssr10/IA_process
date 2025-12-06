@@ -598,7 +598,7 @@ def process_data(data):
         list_of.append({"CLS": CLS, "ID_TRACK":ID_TRACK, "X":X, "Y":Y, "Z": 0})
     return list_of
 
-def crop(box, frame):
+def crop(frame, box):
     x1, y1, x2, y2 = box
     return frame[y1:y2, x1:x2]
 
