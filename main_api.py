@@ -573,7 +573,7 @@ def merge_motion_into_yolo(yolo_results, motion_only):
         fake_det = {
             "id": str(track_id) + "m",
             "class_name": 81,
-            "bbox": [x1, y1, x2, y2],
+            "bbox": [int(x1), int(y1), int(x2), int(y2)],
         }
 
         yolo_results.append(fake_det)
