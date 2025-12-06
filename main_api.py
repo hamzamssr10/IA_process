@@ -410,7 +410,7 @@ def monitor_focus(rtsp_link= RTSP_RGP):
             print("Switching to decreasing focus")
             attempts = 0
             while hybrid_score < focus_threshold and attempts < 30:
-                 print("start decreasing .... ")
+                print("start decreasing .... ")
                 decrease_focus()
                 ret, frame = cap.read()
                 if not ret:
