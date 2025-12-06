@@ -367,12 +367,12 @@ def focus_stop():
 
 def increase_focus():
     _focus_move("in")
-    focus_stop()
+    #focus_stop()
 
 
 def decrease_focus():
     _focus_move("out")
-    focus_stop()
+    #focus_stop()
 
 
 
