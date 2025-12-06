@@ -377,10 +377,9 @@ def decrease_focus():
 
 
 
-def monitor_focus(rtsp_link= RTSP_RGP):
+def monitor_focus(rtsp_link=RTSP_RGP):
     focus_threshold = 1200
     print("start ... ")
-    #global  stop_flag_f
     cap = cv2.VideoCapture(rtsp_link)
     if not cap.isOpened():
         print("Error: Camera not accessible.")
@@ -389,23 +388,20 @@ def monitor_focus(rtsp_link= RTSP_RGP):
     lap_history = deque(maxlen=10)
     ten_history = deque(maxlen=10)
 
-    while True : #and stop_flag_f:
-        print("start ... in ")
+    while True:
         ret, frame = cap.read()
         if not ret:
             break
 
         hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
-        print(hybrid_score)
+        print(f"Hybrid score: {hybrid_score}")
         attempts = 0
 
         while hybrid_score < focus_threshold and attempts < 30:
             increase_focus()
-            print("start increasing .... ")
             ret, frame = cap.read()
             if not ret:
                 break
-
             hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
             attempts += 1
 
@@ -413,18 +409,23 @@ def monitor_focus(rtsp_link= RTSP_RGP):
             print("Switching to decreasing focus")
             attempts = 0
             while hybrid_score < focus_threshold and attempts < 30:
-                print("start decreasing .... ")
                 decrease_focus()
                 ret, frame = cap.read()
                 if not ret:
                     break
-
                 hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
                 attempts += 1
-        else: 
+        else:
             break
-    cv2.imshwo("frame",frame)
 
+        # Show the current frame with hybrid score
+        display_frame = frame.copy()
+        cv2.putText(display_frame, f"Focus: {hybrid_score:.2f}", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv2.imshow("Focus Monitor", display_frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
     cap.release()
     cv2.destroyAllWindows()
