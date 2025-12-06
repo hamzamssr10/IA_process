@@ -347,7 +347,7 @@ FOCUS_SERVER = "http://localhost:3000"
 def _focus_move(direction: str):
     try:
         requests.post(
-            f"{FOCUS_SERVER}/focus/cam1/move",
+            f"{FOCUS_SERVER}/focus/cam2/move",
             json={"direction": direction},
             timeout=0.5,
         )
@@ -359,7 +359,7 @@ def focus_stop():
     try:
         requests.post(
             f"{FOCUS_SERVER}/focus/cam2/stop",
-            timeout=0.5,
+            timeout=1,
         )
     except requests.RequestException as e:
         print(f"Error sending focus stop: {e}")
