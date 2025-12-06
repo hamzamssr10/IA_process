@@ -398,6 +398,7 @@ def monitor_focus(rtsp_link= RTSP_RGP):
 
         while hybrid_score < focus_threshold and attempts < 30:
             increase_focus()
+            print("start increasing .... ")
             ret, frame = cap.read()
             if not ret:
                 break
@@ -409,6 +410,7 @@ def monitor_focus(rtsp_link= RTSP_RGP):
             print("Switching to decreasing focus")
             attempts = 0
             while hybrid_score < focus_threshold and attempts < 30:
+                 print("start decreasing .... ")
                 decrease_focus()
                 ret, frame = cap.read()
                 if not ret:
@@ -466,7 +468,7 @@ bg_sub = cv2.createBackgroundSubtractorMOG2(
 
 
 def track_objects_yolo(model, frame):
-    results = model.track(frame, persist=True, verbose=False)
+    results = model.track(frame,conf = 0.3, persist=True, verbose=False)
     final_output = []
 
     if len(results) == 0:
@@ -501,7 +503,7 @@ bg_sub = cv2.createBackgroundSubtractorMOG2(
     detectShadows=False
 )
 
-def detect_motion(frame, min_area=120):
+def detect_motion(frame, min_area=300):
     fg = bg_sub.apply(frame)
 
     fg = cv2.GaussianBlur(fg, (3, 3), 0)
