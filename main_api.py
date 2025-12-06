@@ -1,9 +1,9 @@
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 import cv2
-from ultralytics import YOLO
+# from ultralytics import YOLO
 import numpy as np
-from ultralytics.trackers.byte_tracker import BYTETracker
+# from ultralytics.trackers.byte_tracker import BYTETracker
 import threading
 import json
 from types import SimpleNamespace
@@ -294,8 +294,8 @@ def save_data(full_frame1, full_frame2, obj, BUFFER_full,BUFFER_full_2, BUFFER_o
 
 
 
-RTSP_RGP = ""
-RTSP_THER = ""
+RTSP_RGP = "rtsp://admin:2899100*-+@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0"
+RTSP_THER = "rtsp://admin:2899100*-+@192.168.1.109:554/cam/realmonitor?channel=1&subtype=0"
 
 args = SimpleNamespace(
     track_high_thresh=0.6,
@@ -305,7 +305,7 @@ args = SimpleNamespace(
     match_thresh=0.8,
     fuse_score=True
 )
-tracker = BYTETracker(args, frame_rate=30)
+# tracker = BYTETracker(args, frame_rate=30)
 
 
 process_thread_f = None
@@ -455,8 +455,8 @@ def make_fake_yolo_results(dets: np.ndarray):
     return FakeResults(xyxy, conf, cls)
 
 
-model_path = "yolov8s.pt"
-model_yolo = YOLO(model_path)
+# model_path = "yolov8s.pt"
+# model_yolo = YOLO(model_path)
 
 bg_sub = cv2.createBackgroundSubtractorMOG2(
     history=500, varThreshold=25, detectShadows=True
@@ -708,7 +708,8 @@ class TrackRequest(BaseModel):
 
 @app.post("/track/object")
 async def track_object(request: TrackRequest):
-    try:
+    # try:
+        print(request)
         for obj in backup:
             if obj["id"] == request.id:
                 return {"status": "found", "object": obj}
@@ -716,8 +717,8 @@ async def track_object(request: TrackRequest):
         last_status = backup[-1] if backup else None
         return {"status": "not found", "object": None, "last_status": last_status}
 
-    except Exception as e:
-        print(f"Error tracking object: {e}")
+    # except Exception as e:
+    #     print(f"Error tracking object: {e}")
 
 
 if __name__ == "__main__":
