@@ -573,12 +573,14 @@ def merge_motion_into_yolo(yolo_results, motion_only):
         fake_det = {
             "id": str(track_id) + "m",
             "class_name": 81,
-            "bbox": [int(x1), int(y1), int(x2), int(y2)],
+            "bbox": [abs(int(x1)), abs(int(y1)),abs( int(x2)), abs(int(y2))],
         }
 
         yolo_results.append(fake_det)
 
     return yolo_results
+
+
 def motion_only_with_conf(motion_only, conf=0.85):
     return [[x1, y1, x2, y2, conf] for x1, y1, x2, y2 in motion_only]
 
@@ -653,7 +655,8 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 if key not in BUFFER_obj:
                     BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
 
-                box =  map(int , object["bbox"])
+                box =  list(map(int , object["bbox"]))
+                # box = list(map(int, final_results[0]["bbox"]))
                 print("box :",box)
                 cropped_rgb = crop(frame_rgb,box)
                 cropped_ther = crop(frame_ther,box)
