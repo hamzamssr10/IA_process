@@ -341,7 +341,7 @@ def calculate_hybrid_focus(frame, lap_history, ten_history):
     hybrid_score = 0.5 * lap_smooth + 0.5 * ten_smooth
     return hybrid_score
 
-FOCUS_SERVER = "http://192.168.25.25:3000"
+FOCUS_SERVER = "http://localhost:3000"
 
 
 def _focus_move(direction: str):
