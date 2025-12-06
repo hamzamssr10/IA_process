@@ -578,33 +578,19 @@ def get_motion_only_objects(motion_boxes, yolo_detections, iou_thresh=0.2):
 
 
 
-def merge_motion_into_yolo(yolo_results, motion_or_tracks):
-    """
-    motion_or_tracks can be:
-     - list/array of motion-only boxes [[x1,y1,x2,y2,conf], ...]
-     - numpy array from BYTETracker: rows like [x1,y1,x2,y2,track_id,score,cls,idx]
-    """
-    # If numpy array with shape (N, >=5) (BYTETracker result)
-    if isinstance(motion_or_tracks, np.ndarray):
-        for row in motion_or_tracks:
-            x1, y1, x2, y2 = map(int, row[:4])
-            track_id = int(row[4])
-            fake_det = {
-                "id": f"{track_id}m",
-                "class_name": 81,
-                "bbox": [x1, y1, x2, y2],
-            }
-            yolo_results.append(fake_det)
-    else:
-        # list of motion boxes (x1,y1,x2,y2,conf) or (x1,y1,x2,y2)
-        for box in motion_or_tracks:
-            x1, y1, x2, y2 = box[:4]
-            fake_det = {
-                "id": "motion",  # or generate unique id
-                "class_name": 81,
-                "bbox": [int(x1), int(y1), int(x2), int(y2)],
-            }
-            yolo_results.append(fake_det)
+
+def merge_motion_into_yolo(yolo_results, motion_only):
+
+    for box in motion_only:
+        x1, y1, x2, y2, track_id = box[:5]
+
+        fake_det = {
+            "id": str(track_id) + "m",
+            "class_name": 81,
+            "bbox": [abs(int(x1)), abs(int(y1)),abs( int(x2)), abs(int(y2))],
+        }
+
+        yolo_results.append(fake_det)
     return yolo_results
 
 
