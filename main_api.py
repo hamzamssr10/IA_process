@@ -394,6 +394,7 @@ def monitor_focus(rtsp_link= RTSP_RGP):
             break
 
         hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
+        print(hybrid_score)
         attempts = 0
 
         while hybrid_score < focus_threshold and attempts < 30:
