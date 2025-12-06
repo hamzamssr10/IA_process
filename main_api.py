@@ -347,7 +347,7 @@ FOCUS_SERVER = "http://localhost:3000"
 def _focus_move(direction: str):
     try:
         requests.post(
-            f"{FOCUS_SERVER}/focus/cam2/move",
+            f"{FOCUS_SERVER}/focus/cam1/move",
             json={"direction": direction},
             timeout=0.5,
         )
