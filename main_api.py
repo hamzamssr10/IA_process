@@ -379,6 +379,7 @@ def decrease_focus():
 
 def monitor_focus(rtsp_link= RTSP_RGP):
     focus_threshold = 1200
+    print("start ... ")
     global  stop_flag_f
     cap = cv2.VideoCapture(rtsp_link)
     if not cap.isOpened():
@@ -389,6 +390,7 @@ def monitor_focus(rtsp_link= RTSP_RGP):
     ten_history = deque(maxlen=10)
 
     while True and stop_flag_f:
+        print("start ... in ")
         ret, frame = cap.read()
         if not ret:
             break
