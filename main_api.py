@@ -406,21 +406,22 @@ def monitor_focus(rtsp_link=RTSP_RGP):
         hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
         print(f"Hybrid score: {hybrid_score:.2f}")
 
-        # Determine if increasing helps
         attempts = 0
         max_attempts = 50
-        while abs(hybrid_score - focus_threshold) > 10  and attempts < max_attempts:
-            if hybrid_score < focus_threshold : #and hybrid_score > prev_score:
-                # Still getting closer, keep increasing
-                increase_focus()
-                print("Increasing focus... (moving closer to threshold)")
-            elif hybrid_score < focus_threshold and hybrid_score <= prev_score:
-                # Not improving, switch to decreasing
-                print("Switching to decreasing focus...")
-                decrease_focus()
+
+        while abs(hybrid_score - focus_threshold) > 10 and attempts < max_attempts:
+            if hybrid_score < focus_threshold:
+                if hybrid_score > prev_score:
+                    # Getting closer: keep increasing
+                    increase_focus()
+                    print("Increasing focus...")
+                else:
+                    # Not improving: switch to decreasing
+                    decrease_focus()
+                    print("Decreasing focus (score not improving)...")
             elif hybrid_score > focus_threshold:
-                # Score already above threshold, break or hold
-                print("Score above threshold, hold focus.")
+                # Already above threshold, hold
+                print("Focus above threshold, holding...")
                 break
 
             prev_score = hybrid_score
