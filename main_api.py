@@ -423,6 +423,7 @@ def monitor_focus(rtsp_link= RTSP_RGP):
                 attempts += 1
         else: 
             break
+    cv2.imshwo("frame",frame)
 
 
     cap.release()
