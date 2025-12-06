@@ -547,53 +547,64 @@ def detect_motion(frame, min_area=300):
 process_thread = None
 stop_flag = False
 
-def iou(m, y):
+def iou_xyxy(a, b):
+    """Compute IoU where boxes are [x1,y1,x2,y2]"""
+    xA = max(a[0], b[0])
+    yA = max(a[1], b[1])
+    xB = min(a[2], b[2])
+    yB = min(a[3], b[3])
 
-    xA = max(m[0], y[0])
-    yA = max(m[1], y[1])
-    xB = min(m[0] + m[2], y[0] + y[2])
-    yB = min(m[1] + m[3], y[1] + y[3])
+    inter_w = max(0, xB - xA)
+    inter_h = max(0, yB - yA)
+    inter = inter_w * inter_h
 
-    inter = max(0, xB - xA) * max(0, yB - yA)
-    area_m = m[2] * m[3]
-    area_y = y[2] * y[3]
-
-    return inter / (area_m + area_y - inter + 1e-6)
+    area_a = max(0, a[2] - a[0]) * max(0, a[3] - a[1])
+    area_b = max(0, b[2] - b[0]) * max(0, b[3] - b[1])
+    union = area_a + area_b - inter + 1e-6
+    return inter / union if union > 0 else 0.0
 
 def get_motion_only_objects(motion_boxes, yolo_detections, iou_thresh=0.2):
-
     motion_only = []
-
     for m_box in motion_boxes:
         found = False
-
         for det in yolo_detections:
-            y_box = det["bbox"]
-            if iou(m_box, y_box) > iou_thresh:
+            y_box = det["bbox"]  # already xyxy
+            if iou_xyxy(m_box, y_box) > iou_thresh:
                 found = True
                 break
-
         if not found:
             motion_only.append(m_box)
-
     return motion_only
 
 
 
-
-def merge_motion_into_yolo(yolo_results, motion_only):
-
-    for box in motion_only:
-        x1, y1, x2, y2, track_id = box[:5]
-
-        fake_det = {
-            "id": str(track_id) + "m",
-            "class_name": 81,
-            "bbox": [abs(int(x1)), abs(int(y1)),abs( int(x2)), abs(int(y2))],
-        }
-
-        yolo_results.append(fake_det)
-
+def merge_motion_into_yolo(yolo_results, motion_or_tracks):
+    """
+    motion_or_tracks can be:
+     - list/array of motion-only boxes [[x1,y1,x2,y2,conf], ...]
+     - numpy array from BYTETracker: rows like [x1,y1,x2,y2,track_id,score,cls,idx]
+    """
+    # If numpy array with shape (N, >=5) (BYTETracker result)
+    if isinstance(motion_or_tracks, np.ndarray):
+        for row in motion_or_tracks:
+            x1, y1, x2, y2 = map(int, row[:4])
+            track_id = int(row[4])
+            fake_det = {
+                "id": f"{track_id}m",
+                "class_name": 81,
+                "bbox": [x1, y1, x2, y2],
+            }
+            yolo_results.append(fake_det)
+    else:
+        # list of motion boxes (x1,y1,x2,y2,conf) or (x1,y1,x2,y2)
+        for box in motion_or_tracks:
+            x1, y1, x2, y2 = box[:4]
+            fake_det = {
+                "id": "motion",  # or generate unique id
+                "class_name": 81,
+                "bbox": [int(x1), int(y1), int(x2), int(y2)],
+            }
+            yolo_results.append(fake_det)
     return yolo_results
 
 
@@ -617,7 +628,14 @@ def process_data(data):
     return list_of
 
 def crop(frame, box):
+    h, w = frame.shape[:2]
     x1, y1, x2, y2 = box
+    x1 = max(0, min(w-1, int(x1)))
+    y1 = max(0, min(h-1, int(y1)))
+    x2 = max(0, min(w, int(x2)))
+    y2 = max(0, min(h, int(y2)))
+    if x2 <= x1 or y2 <= y1:
+        return np.empty((0,0,3), dtype=frame.dtype)
     return frame[y1:y2, x1:x2]
 
 backup  = []
