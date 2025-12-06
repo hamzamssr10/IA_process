@@ -641,6 +641,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         tracks = tracker.update(fake_results, frame_rgb)
 
         final_results = merge_motion_into_yolo(yolo_results, tracks)
+        print("final_results :",final_results)
         if len(final_results) > 0 :
             
             # save events 
