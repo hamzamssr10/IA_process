@@ -379,7 +379,9 @@ def decrease_focus():
 
 def monitor_focus(rtsp_link=RTSP_RGP):
     focus_threshold = 1200
-    print("start ... ")
+    tolerance = 50  # Acceptable range around threshold
+    print("Start monitoring focus...")
+    
     cap = cv2.VideoCapture(rtsp_link)
     if not cap.isOpened():
         print("Error: Camera not accessible.")
@@ -394,31 +396,28 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             break
 
         hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
-        print(f"Hybrid score: {hybrid_score}")
-        attempts = 0
+        print(f"Hybrid score: {hybrid_score:.2f}")
 
-        while hybrid_score < focus_threshold and attempts < 30:
-            increase_focus()
+        # Adjust focus until score is within threshold ± tolerance
+        attempts = 0
+        max_attempts = 30
+        while (hybrid_score < focus_threshold - tolerance or 
+               hybrid_score > focus_threshold + tolerance) and attempts < max_attempts:
+            if hybrid_score < focus_threshold - tolerance:
+                print("Increasing focus...")
+                increase_focus()
+            elif hybrid_score > focus_threshold + tolerance:
+                print("Decreasing focus...")
+                decrease_focus()
+
             ret, frame = cap.read()
             if not ret:
                 break
+
             hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
             attempts += 1
 
-        if hybrid_score < focus_threshold:
-            print("Switching to decreasing focus")
-            attempts = 0
-            while hybrid_score < focus_threshold and attempts < 30:
-                decrease_focus()
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
-                attempts += 1
-        else:
-            break
-
-        # Show the current frame with hybrid score
+        # Show frame with hybrid score
         display_frame = frame.copy()
         cv2.putText(display_frame, f"Focus: {hybrid_score:.2f}", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -429,10 +428,6 @@ def monitor_focus(rtsp_link=RTSP_RGP):
 
     cap.release()
     cv2.destroyAllWindows()
-
-
-
-
 
 
 
