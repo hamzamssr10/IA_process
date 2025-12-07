@@ -691,7 +691,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         ret_ther, frame_ther = cap_ther.read()
         print("starting ... ")
 
-        if not ret_rgb and ret_ther:
+        if not ret_rgb or ret_ther:
             break
         
         update_buffer(frame_rgb, BUFFER)
