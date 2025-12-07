@@ -298,15 +298,7 @@ def save_data(full_frame1, full_frame2, obj, BUFFER_full,BUFFER_full_2, BUFFER_o
 RTSP_RGP = "rtsp://admin:2899100*-+@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0"
 RTSP_THER = "rtsp://admin:2899100*-+@192.168.1.109:554/cam/realmonitor?channel=1&subtype=0"
 
-args = SimpleNamespace(
-    track_high_thresh=0.6,
-    track_low_thresh=0.1,
-    new_track_thresh=0.5,
-    track_buffer=30,
-    match_thresh=0.8,
-    fuse_score=True
-)
-tracker = BYTETracker(args, frame_rate=30)
+
 
 
 process_thread_f = None
@@ -347,7 +339,6 @@ def calculate_hybrid_focus(frame, lap_history, ten_history):
 
 FOCUS_SERVER = "http://localhost:3000"
 
-#def _focus_move(direction: str, speed: int = 2, time: float = 0.4):
 def _focus_move(payload):
     try:
         requests.post(
@@ -452,17 +443,7 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             
             print(f"New score: {new_score:.2f} | Change: {score_change:+.2f}")
             
-            # Display frame
-            display_frame = frame.copy()
-            cv2.putText(display_frame, f"Score: {new_score:.2f}/{focus_threshold}", 
-                       (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(display_frame, f"Dir: {direction} | Speed: {speed}", 
-                       (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
-            cv2.putText(display_frame, f"Change: {score_change:+.2f}", 
-                       (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.imshow("Focus Monitor", display_frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+ 
             
             # Decision logic: only reverse if consistently getting worse
             if new_score > prev_score:
@@ -485,7 +466,6 @@ def monitor_focus(rtsp_link=RTSP_RGP):
         
         print(f"Focus adjustment complete!")
         print(f"Final score: {hybrid_score:.2f} | Target: {focus_threshold}")
-        print(f"Attempts: {attempts}")
         print(f"{'='*50}")
     else:
         print(f"Focus already above threshold: {hybrid_score:.2f}")
@@ -607,66 +587,55 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 track_id_t = object["id"]
                 cls_name_t = object["class_name"]
 
-                box =  list(map(int , object["bbox"]))
+                box = list(map(int, object["bbox"]))
                 x1, y1, x2, y2 = box
                 
-                x_c, y_c = int((x1 + x2) / 2), int((y1 + y2) / 2)
+                # Compute center of the box
+                x_c, y_c = (x1 + x2) // 2, (y1 + y2) // 2
 
+                # Update memo for tracking lines
                 track_key = string_to_hex(track_id_t)
-                
                 if track_key not in memo:
                     memo[track_key] = []
-                
                 memo[track_key].append((x_c, y_c))
-
                 if len(memo[track_key]) > 50:
                     memo[track_key].pop(0)
 
-                
+                # ---- DRAW TRACKING LINES ----
+                points = memo[track_key]
+                if len(points) > 1:
+                    for i in range(1, len(points)):
+                        cv2.line(frame_rgb, points[i - 1], points[i], (0, 255, 0), 2)  # Green lines
+
                 # ---- DRAW BOXES ----
-                # drawing the tracking lines ... 
-                for track_key, points in memo.items():
-                    if len(points) > 1:
-                        for i in range(1, len(points)):
-                            cv2.line(
-                                frame_rgb,
-                                points[i - 1],
-                                points[i],
-                                (0, 255, 0),  
-                                2              
-                            )
-                color = (0, 255, 0)  # green box
+                color = (0, 255, 0)  # Green box
                 cv2.rectangle(frame_rgb, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame_rgb, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                 
                
-                
-                key = f"{track_id_t}-{cls_name_t}"
-                if key not in BUFFER_obj:
-                    BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
-                cropped_rgb = crop(frame_rgb,box)
-                cropped_ther = crop(frame_ther,box)
+                # key = f"{track_id_t}-{cls_name_t}"
+                # if key not in BUFFER_obj:
+                #     BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
 
-                update_buffer(cropped_rgb, BUFFER_obj[key][0])
-                update_buffer(cropped_ther,BUFFER_obj[key][1])
+                # cropped_rgb = crop(frame_rgb,box)
+                # cropped_ther = crop(frame_ther,box)
 
-                #save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
+                # update_buffer(cropped_rgb, BUFFER_obj[key][0])
+                # update_buffer(cropped_ther,BUFFER_obj[key][1])
+
+                # save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
 
 
         # Show the frames
         End_time = time.time()
         elapsed = End_time - start_time
         print(elapsed)
-        # Ensure each loop takes at least 0.3s
         if elapsed < 0.3:
             time.sleep(0.3 - elapsed)
         cv2.imshow("RGB Stream", frame_rgb)
-        #cv2.imshow("Thermal Stream", frame_ther)
         if cv2.waitKey(1) & 0xFF == 27:
             break
-
-            
 
     cap_rgb.release()
     cap_ther.release()
@@ -677,7 +646,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
 
 
 def move_camera_to_track(target_pos):
-    cap_rgb_ = cv2.VideoCapture(RTSP_RGB)
+    cap_rgb_ = cv2.VideoCapture("rtsp://admin:2899100*-+@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0")
     _ , frame_ = cap_rgb_.read()
     h_rgb, w_rgb = frame_.shape[:2]
     CAM_CENTER_X = int(w_rgb/2) 
@@ -689,13 +658,11 @@ def move_camera_to_track(target_pos):
     dx = x - CAM_CENTER_X
     dy = y - CAM_CENTER_Y
 
-    # Horizontal movement
     if abs(dx) > THRESH_X:
         direction_x = "right" if dx > 0 else "left"
         speed_x = min(abs(dx)//10, 8)
         send_ptz_request(direction_x, speed_x)
 
-    # Vertical movement
     if abs(dy) > THRESH_Y:
         direction_y = "down" if dy > 0 else "up"
         speed_y = min(abs(dy)//10, 8)
@@ -791,4 +758,3 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=9898
     )
-
