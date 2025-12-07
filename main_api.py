@@ -590,7 +590,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
             break
         
 
-        yolo_results = detect_objects_yolo(model_yolo, frame_rgb)
+        yolo_results = track_objects_yolo(model_yolo, frame_rgb)
 
         final_results = yolo_results
         if len(final_results) > 0 :
