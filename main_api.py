@@ -521,7 +521,7 @@ def make_fake_yolo_results(dets: np.ndarray):
 
 
 model_path = "yolov8s.pt"
-model_yolo = YOLO(model_path).to("cuda")
+model_yolo = YOLO(model_path)
 
 bg_sub = cv2.createBackgroundSubtractorMOG2(
     history=500, varThreshold=25, detectShadows=True
