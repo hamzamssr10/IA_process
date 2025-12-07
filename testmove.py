@@ -5,7 +5,7 @@ import time
 FOCUS_SERVER = "http://localhost:3000"
 
 def send_ptz_request(direction, speed=8, channel=0, duration=200):
-    url = f"{FOCUS_SERVER}/ptz/cam2/move"
+    url = f"{FOCUS_SERVER}/ptz/cam1/move"
     payload = {
         "direction": direction,
         "speed": speed,
