@@ -4,7 +4,7 @@ import time
 # Replace this with your actual server URL
 FOCUS_SERVER = "http://localhost:3000"
 
-def send_ptz_request(direction, speed=8, channel=0, duration=200):
+def send_ptz_request(direction, speed=3, channel=0, duration=200):
     url = f"{FOCUS_SERVER}/ptz/cam1/move"
     payload = {
         "direction": direction,
@@ -44,5 +44,5 @@ if __name__ == "__main__":
     for dir in directions:
         print(f"Sending PTZ request: {dir}")
         send_ptz_request(direction=dir)
-        time.sleep(0.1)  # wait 1s between requests
+        time.sleep(0.5)  # wait 1s between requests
         send_ptz_request2(direction=dir)
