@@ -67,11 +67,11 @@ def monitor_focus():
         hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
         attempts += 1
         
-        print("Switching to decreasing focus")
         hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
 
 
         status = f"Focus Score: {hybrid_score:.1f}"
+        print(status)
 
         time.sleep(0.05)
 
