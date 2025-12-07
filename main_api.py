@@ -377,25 +377,14 @@ def increase_focus(speed: int = 2, duration: float = 0.5):
     time.sleep(duration)  # Allow actual movement
     _focus_stop(pyload)
 
-def decrease_focus(speed: int = 2, duration: float = 0.5):
+def decrease_focus(speed: int = 2, duration: float = 0.2):
     """Move focus out - longer duration for meaningful movement"""
     pyload = {"direction": "focus_out", "speed": speed}
     _focus_move(pyload)
     time.sleep(duration)  # Allow actual movement
     _focus_stop(pyload)
 
-def calculate_focus_params(score_diff):
-    """Adjust speed and duration based on distance from threshold"""
-    if score_diff > 800:
-        return 6, 0.8  # Fast, long movements when far
-    elif score_diff > 400:
-        return 5, 0.6
-    elif score_diff > 200:
-        return 4, 0.4
-    elif score_diff > 100:
-        return 3, 0.3
-    else:
-        return 2, 0.2  # Slow, short movements when close
+
 
 def monitor_focus(rtsp_link=RTSP_RGP):
     focus_threshold = 1800
@@ -408,17 +397,6 @@ def monitor_focus(rtsp_link=RTSP_RGP):
     lap_history = deque(maxlen=10)
     ten_history = deque(maxlen=10)
     
-    # Fill initial history buffer
-    print("Filling history buffer...")
-    for _ in range(10):
-        ret, frame = cap.read()
-        if not ret:
-            print("Failed to fill buffer")
-            return
-        calculate_hybrid_focus(frame, lap_history, ten_history)
-        time.sleep(0.05)
-    
-    print("Buffer filled, starting focus adjustment...")
     
     # Get initial score
     ret, frame = cap.read()
@@ -429,20 +407,17 @@ def monitor_focus(rtsp_link=RTSP_RGP):
     hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
     print(f"Initial hybrid score: {hybrid_score:.2f}")
     
-    # Only adjust if below threshold
-    if hybrid_score < focus_threshold:
+    if hybrid_score + 100 < focus_threshold:
         prev_score = hybrid_score
         direction = "increase"  # Start by increasing
-        attempts = 0
-        max_attempts = 50
+
         consecutive_worse = 0  # Track how many times score got worse
         
-        while hybrid_score < focus_threshold and attempts < max_attempts:
+        while hybrid_score < focus_threshold: # and attempts < max_attempts:
             # Calculate dynamic parameters based on distance
             score_diff = focus_threshold - hybrid_score
-            speed, duration = calculate_focus_params(score_diff)
+            speed, duration = 2, 0.2
             
-            print(f"\n--- Attempt {attempts + 1} ---")
             print(f"Score: {hybrid_score:.2f} | Target: {focus_threshold} | Diff: {score_diff:.2f}")
             print(f"Direction: {direction} | Speed: {speed} | Duration: {duration}s")
             
@@ -507,9 +482,7 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             
             prev_score = new_score
             hybrid_score = new_score
-            attempts += 1
         
-        print(f"\n{'='*50}")
         print(f"Focus adjustment complete!")
         print(f"Final score: {hybrid_score:.2f} | Target: {focus_threshold}")
         print(f"Attempts: {attempts}")
@@ -517,19 +490,6 @@ def monitor_focus(rtsp_link=RTSP_RGP):
     else:
         print(f"Focus already above threshold: {hybrid_score:.2f}")
     
-    # Show final result
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        
-        hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
-        display_frame = frame.copy()
-        cv2.putText(display_frame, f"FINAL Score: {hybrid_score:.2f}", 
-                   (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.imshow("Focus Monitor", display_frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
     
     cap.release()
     cv2.destroyAllWindows()
