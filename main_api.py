@@ -376,13 +376,13 @@ def calculate_focus_params(score_diff):
     """
     if score_diff > 800:
         # Very far - move fast
-        return 5, 0.6, 0.5
+        return 5, 6, 0.5
     elif score_diff > 400:
         # Far - move medium-fast
-        return 4, 0.5, 0.4
+        return 4, 4, 0.4
     elif score_diff > 200:
         # Medium distance - move medium
-        return 3, 0.4, 0.3
+        return 3, 0.9, 0.3
     elif score_diff > 100:
         # Close - move slow
         return 2, 0.3, 0.25
