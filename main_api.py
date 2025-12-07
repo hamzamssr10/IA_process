@@ -734,10 +734,6 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
             cv2.destroyAllWindows()
 
 
-        cap_rgb.release()
-        cap_ther.release()
-        cv2.destroyAllWindows()
-
 
 
 
