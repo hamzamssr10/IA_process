@@ -550,11 +550,11 @@ memo  = {}
 
 
 
-def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
+def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True, ids_to_track = []):
     print("start process ... ")
-    global stop_flag
-    global backup
-    global memo 
+    global stop_flag, memo, backup, track_only_id
+
+    track_only_id = None 
 
     
     cap_rgb = cv2.VideoCapture(rtsp_RGB)
@@ -565,6 +565,9 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         ret_rgb, frame_rgb = cap_rgb.read()
         ret_ther, frame_ther = cap_ther.read()
 
+        frame_rgb = cv2.resize(frame_rgb, (frame_rgb.shape[1] // 2, frame_rgb.shape[0] // 2))
+        frame_ther = cv2.resize(frame_ther, (frame_ther.shape[1] // 2, frame_ther.shape[0] // 2))
+
 
         if not ret_rgb and  ret_ther:
             break
@@ -573,6 +576,15 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         yolo_results = track_objects_yolo(model_yolo, frame_rgb)
 
         final_results = yolo_results
+
+
+        if track_only_id is not None:
+
+            final_results = [obj for obj in final_results if string_to_hex(obj["id"]) == track_only_id]
+
+            memo = {track_only_id: memo.get(track_only_id, [])}
+
+
         if len(final_results) > 0 :
             # send events
             data_event = process_data(final_results)
@@ -598,33 +610,34 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 if track_key not in memo:
                     memo[track_key] = []
                 memo[track_key].append((x_c, y_c))
+
                 if len(memo[track_key]) > 50:
                     memo[track_key].pop(0)
 
-                # ---- DRAW TRACKING LINES ----
-                points = memo[track_key]
-                if len(points) > 1:
-                    for i in range(1, len(points)):
-                        cv2.line(frame_rgb, points[i - 1], points[i], (0, 255, 0), 2)  # Green lines
+                # # ---- DRAW TRACKING LINES ----
+                # points = memo[track_key]
+                # if len(points) > 1:
+                #     for i in range(1, len(points)):
+                #         cv2.line(frame_rgb, points[i - 1], points[i], (0, 255, 0), 2)  # Green lines
 
-                # ---- DRAW BOXES ----
-                color = (0, 255, 0)  # Green box
-                cv2.rectangle(frame_rgb, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(frame_rgb, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                # # ---- DRAW BOXES ----
+                # color = (0, 255, 0)  # Green box
+                # cv2.rectangle(frame_rgb, (x1, y1), (x2, y2), color, 2)
+                # cv2.putText(frame_rgb, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
+                #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                 
                
-                # key = f"{track_id_t}-{cls_name_t}"
-                # if key not in BUFFER_obj:
-                #     BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
+                key = f"{track_id_t}-{cls_name_t}"
+                if key not in BUFFER_obj:
+                    BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
 
-                # cropped_rgb = crop(frame_rgb,box)
-                # cropped_ther = crop(frame_ther,box)
+                cropped_rgb = crop(frame_rgb,box)
+                cropped_ther = crop(frame_ther,box)
 
-                # update_buffer(cropped_rgb, BUFFER_obj[key][0])
-                # update_buffer(cropped_ther,BUFFER_obj[key][1])
+                update_buffer(cropped_rgb, BUFFER_obj[key][0])
+                update_buffer(cropped_ther,BUFFER_obj[key][1])
 
-                # save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
+                save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
 
 
         # Show the frames
@@ -633,9 +646,9 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         print(elapsed)
         if elapsed < 0.3:
             time.sleep(0.3 - elapsed)
-        cv2.imshow("RGB Stream", frame_rgb)
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
+        # cv2.imshow("RGB Stream", frame_rgb)
+        # if cv2.waitKey(1) & 0xFF == 27:
+        #     break
 
     cap_rgb.release()
     cap_ther.release()
@@ -720,16 +733,15 @@ class TrackRequest(BaseModel):
 
 @app.post("/track/object")
 async def track_object(request: TrackRequest):
-    global memo, backup
+    global memo, track_only_id
     
     target_hex = request.id
+    track_only_id = target_hex 
     
-    # Check if this ID exists in memo
     if target_hex in memo:
         positions = memo[target_hex]
         last_pos = positions[-1] if positions else None
 
-        # Move camera if object is far from center
         if last_pos:
             move_camera_to_track(last_pos)
 
@@ -741,7 +753,6 @@ async def track_object(request: TrackRequest):
             "path_length": len(positions)
         }
     
-    # Not found → return last global status
     last_status = backup[-1] if backup else None
     
     return {
