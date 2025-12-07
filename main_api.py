@@ -677,6 +677,18 @@ backup  = []
 
 memo  = {}
 
+def grab_latest_frame(cap):
+    # Grab frames until the buffer is empty, return the latest
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            return None
+        if cap.grab():  # Try to grab next frame
+            continue
+        else:
+            return frame
+
+
 def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     global stop_flag
     global backup
@@ -687,8 +699,8 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     cap_ther = cv2.VideoCapture(rtsp_thermique)
 
     while True and not stop_flag:
-        ret_rgb, frame_rgb = cap_rgb.read()
-        ret_ther, frame_ther = cap_ther.read()
+        ret_rgb, frame_rgb = grab_latest_frame(cap_rgb) #.read()
+        ret_ther, frame_ther = grab_latest_frame(cap_ther) #.read()
         print("starting ... ")
         print('ret_rgb',ret_rgb)
         print('frame_ther',ret_ther)
