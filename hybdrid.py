@@ -60,7 +60,6 @@ def monitor_focus():
 
         hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
         attempts = 0
-        increase_focus()
         ret, frame = cap.read()
         if not ret:
             break
