@@ -739,7 +739,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 
                 x_c, y_c = int((x1 + x2) / 2), int((y1 + y2) / 2)
 
-                track_key = hex(track_id_t)
+                track_key = string_to_hex(track_id_t)
                 
                 if track_key not in memo:
                     memo[track_key] = []
