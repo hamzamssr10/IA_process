@@ -625,7 +625,7 @@ memo  = {}
 
 
 
-def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True, ids_to_track = []):
+def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     print("start process ... ")
     global stop_flag, memo, backup, track_only_id
 
@@ -649,7 +649,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
             frame_thc = frame_ther.copy()
 
             start_time = time.time()
-            if last_detection_time and (time.time() - last_detection_time) > 10:
+            if last_detection_time and (time.time() - last_detection_time) < 10:
                 last_detection_time = time.time()
                 print("skipping frame due to no detections...")
                 continue
