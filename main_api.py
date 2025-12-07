@@ -367,35 +367,10 @@ def decrease_focus(speed: int = 2, time: float = 0.4):
     _focus_move("focus_out", speed, time)
 
 
-def calculate_focus_params(score_diff):
-    """
-    Calculate speed and time based on how far we are from the threshold.
-    
-    Args:
-        score_diff: Difference between current score and threshold (absolute value)
-    
-    Returns:
-        tuple: (speed, time, sleep_time)
-    """
-    if score_diff > 800:
-        # Very far - move fast and long
-        return 8, 1.0, 1.5
-    elif score_diff > 400:
-        # Far - move fast but shorter
-        return 6, 0.8, 1.2
-    elif score_diff > 200:
-        # Medium distance - move medium speed
-        return 4, 0.6, 1.0
-    elif score_diff > 100:
-        # Close - move slow
-        return 2, 0.4, 0.8
-    else:
-        # Very close - move very slow and precise
-        return 1, 0.2, 0.5
 
 
 def monitor_focus(rtsp_link=RTSP_RGP):
-    focus_threshold = 1800
+    focus_threshold = 1200
     print("Start monitoring focus...")
     cap = cv2.VideoCapture(rtsp_link)
     if not cap.isOpened():
@@ -411,14 +386,7 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             print("No frame captured.")
             break
         
-        # Wait for histories to fill up for accurate calculation
-        if len(lap_history) < 10 or len(ten_history) < 10:
-            calculate_hybrid_focus(frame, lap_history, ten_history)
-            print("Filling history buffers...")
-            time.sleep(0.1)
-            continue
-        
-        # Calculate initial score with filled histories
+        # Calculate initial score
         hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
         print(f"Hybrid score: {hybrid_score:.2f}")
         
@@ -427,56 +395,43 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             prev_score = hybrid_score
             direction = "increase"  # Start by increasing
             attempts = 0
-            max_attempts = 100
+            max_attempts = 50
             
-            while hybrid_score < focus_threshold and attempts < max_attempts:
-                # Calculate how far we are from threshold
+            while abs(hybrid_score - focus_threshold) > 10: # and attempts < max_attempts:
                 score_diff = abs(hybrid_score - focus_threshold)
+                if score_diff > 800 :
+                        speed_act = 8
+                    elif score_diff > 400 :
+                        speed_act = 5
+                    else:
+                        spee_act = 2
                 
-                # Get dynamic parameters based on distance
-                speed, move_time, sleep_time = calculate_focus_params(score_diff)
-                
-                print(f"Distance to threshold: {score_diff:.2f} -> speed: {speed}, time: {move_time}s")
-                
-                # Adjust focus based on current direction with dynamic parameters
+                # Adjust focus based on current direction
                 if direction == "increase":
-                    increase_focus(speed, move_time)
-                    print(f"Increasing focus (speed: {speed}, time: {move_time}s)...")
+                    increase_focus(speed = speed_act)
+                    print("Increasing focus...")
+                    time.sleep(0.3)
                 else:
-                    decrease_focus(speed, move_time)
-                    print(f"Decreasing focus (speed: {speed}, time: {move_time}s)...")
+                    decrease_focus(speed = speed_act)
+                    print("Decreasing focus...")
+                    time.sleep(0.3)
                 
-                # Wait for movement to complete + settling time
-                time.sleep(sleep_time)
-                
-                # Capture multiple frames and recalculate score properly
-                # This ensures the focus has settled and histories are updated
-                for _ in range(3):
-                    ret, frame = cap.read()
-                    if not ret:
-                        break
-                    calculate_hybrid_focus(frame, lap_history, ten_history)
-                    time.sleep(0.1)
-                
-                if not ret:
-                    break
-                
-                # Now get the actual score with updated histories
+                # Capture new frame and recalculate score
                 ret, frame = cap.read()
                 if not ret:
                     break
-                    
+                
                 hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
-                print(f"New hybrid score: {hybrid_score:.2f} (change: {hybrid_score - prev_score:+.2f})")
+                print(f"New hybrid score: {hybrid_score:.2f}")
                 
                 # Check if we're getting closer to threshold
                 if hybrid_score > prev_score:
                     # Score improved, keep current direction
-                    print(f"✓ Score improved! Continuing to {direction}...")
+                    print(f"Score improved! Continuing to {direction}...")
                 else:
                     # Score got worse, reverse direction
                     direction = "decrease" if direction == "increase" else "increase"
-                    print(f"✗ Score worsened. Switching to {direction}...")
+                    print(f"Score worsened. Switching to {direction}...")
                 
                 prev_score = hybrid_score
                 attempts += 1
@@ -484,11 +439,18 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             print(f"Focus adjustment complete. Final score: {hybrid_score:.2f}")
         else:
             print(f"Focus already above threshold: {hybrid_score:.2f}")
+        
+        # Display frame with score
+        display_frame = frame.copy()
+        cv2.putText(display_frame, f"Focus: {hybrid_score:.2f}", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv2.imshow("Focus Monitor", display_frame)
+        
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     
     cap.release()
     cv2.destroyAllWindows()
-
 
 class FakeResults:
     def __init__(self, xyxy, conf, cls):
