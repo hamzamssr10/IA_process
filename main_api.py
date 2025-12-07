@@ -639,7 +639,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
                     update_buffer(cropped_rgb, BUFFER_obj[key][0])
                     update_buffer(cropped_ther,BUFFER_obj[key][1])
 
-                    save_data(frame_rgbc, frame_thrc, object, BUFFER,BUFFER_t, BUFFER_obj[key])
+                    save_data(frame_rgbc, frame_thc, object, BUFFER,BUFFER_t, BUFFER_obj[key])
 
 
             End_time = time.time()
