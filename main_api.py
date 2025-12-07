@@ -369,7 +369,7 @@ def decrease_focus():
 
 
 def monitor_focus(rtsp_link=RTSP_RGP):
-    focus_threshold = 1200
+    focus_threshold = 2000
     print("Start monitoring focus...")
     cap = cv2.VideoCapture(rtsp_link)
     if not cap.isOpened():
