@@ -240,8 +240,8 @@ async def startup_event():
     print(" Tâche d'écoute des clients démarrée")
 
     # Démarrer la tâche d'envoi automatique
-    sending_task = asyncio.create_task(auto_send_task())
-    print(" Tâche d'envoi automatique démarrée (toutes les secondes)")
+    #sending_task = asyncio.create_task(auto_send_task())
+    #print(" Tâche d'envoi automatique démarrée (toutes les secondes)")
 
 
 @app.on_event("shutdown")
@@ -639,29 +639,27 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
 
     while True and not stop_flag:
         # try:
+            ret_rgb, frame_rgb = cap_rgb.read()
+            ret_ther, frame_ther = cap_ther.read()
+
+            
+            if not ret_rgb and  not ret_ther:
+                break
+            frame_rgbc = frame_rgb.copy()
+            frame_thc = frame_ther.copy()
+
             start_time = time.time()
-            if last_detection_time and (time.time() - last_detection_time) > 20:
+            if last_detection_time and (time.time() - last_detection_time) > 10:
                 last_detection_time = time.time()
                 print("skipping frame due to no detections...")
                 continue
 
-            if not ret_rgb and  ret_ther:
-                break
-
-            ret_rgb, frame_rgb = cap_rgb.read()
-            ret_ther, frame_ther = cap_ther.read()
-
-            frame_rgbc = frame_rgb.copy()
-            frame_thc = frame_ther.copy()
 
             frame_rgb = cv2.resize(frame_rgb, (frame_rgb.shape[1] // 2, frame_rgb.shape[0] // 2))
             frame_ther = cv2.resize(frame_ther, (frame_ther.shape[1] // 2, frame_ther.shape[0] // 2))
 
             update_buffer(frame_rgbc, BUFFER)
             update_buffer(frame_thc,BUFFER_t)
-
-            
-           
             
             yolo_results = track_objects_yolo(model_yolo, frame_rgb)
 
@@ -732,6 +730,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
             cap_rgb.release()
             cap_ther.release()
             cv2.destroyAllWindows()
+
 
 
 
