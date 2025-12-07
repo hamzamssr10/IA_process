@@ -755,7 +755,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 update_buffer(cropped_rgb, BUFFER_obj[key][0])
                 update_buffer(cropped_ther,BUFFER_obj[key][1])
 
-                save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
+                #save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
                 # ---- DRAW BOXES ----
                 x1, y1, x2, y2 = box
                 # drawing the tracking lines ... 
@@ -763,7 +763,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                     if len(points) > 1:
                         for i in range(1, len(points)):
                             cv2.line(
-                                frame,
+                                frame_rgb,
                                 points[i - 1],
                                 points[i],
                                 (0, 255, 0),  
