@@ -37,9 +37,8 @@ def decrease_focus():
 # -------------------------------
 # Test with video display
 # -------------------------------
-if _name_ == "_main_":
 
-    while True:
+while True:
         
         print("Increasing focus...")
         increase_focus()
