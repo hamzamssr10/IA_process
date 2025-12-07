@@ -371,69 +371,75 @@ def decrease_focus():
 def monitor_focus(rtsp_link=RTSP_RGP):
     focus_threshold = 1200
     print("Start monitoring focus...")
-
     cap = cv2.VideoCapture(rtsp_link)
     if not cap.isOpened():
         print("Error: Camera not accessible.")
         return
-
+    
     lap_history = deque(maxlen=10)
     ten_history = deque(maxlen=10)
-
-    ret, frame = cap.read()
-    if not ret:
-        cap.release()
-        print("No frame captured.")
-        return
-
-    prev_score = calculate_hybrid_focus(frame, lap_history, ten_history)
-    print(f"Initial hybrid score: {prev_score:.2f}")
-
+    
     while True:
         ret, frame = cap.read()
         if not ret:
+            print("No frame captured.")
             break
-
+        
+        # Calculate initial score
         hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
         print(f"Hybrid score: {hybrid_score:.2f}")
-
-        attempts = 0
-        max_attempts = 50
-
-        while abs(hybrid_score - focus_threshold) > 10: # and attempts < max_attempts:
-            if hybrid_score < focus_threshold:
-                if hybrid_score > prev_score:
-                    # Getting closer: keep increasing
+        
+        # If score is below threshold, start adjustment loop
+        if hybrid_score < focus_threshold:
+            prev_score = hybrid_score
+            direction = "increase"  # Start by increasing
+            attempts = 0
+            max_attempts = 50
+            
+            while abs(hybrid_score - focus_threshold) > 10 and attempts < max_attempts:
+                # Adjust focus based on current direction
+                if direction == "increase":
                     increase_focus()
                     print("Increasing focus...")
                 else:
-                    # Not improving: switch to decreasing
                     decrease_focus()
-                    print("Decreasing focus (score not improving)...")
-            elif hybrid_score > focus_threshold:
-                # Already above threshold, hold
-                print("Focus above threshold, holding...")
-                break
-
-            prev_score = hybrid_score
-            ret, frame = cap.read()
-            if not ret:
-                break
-            hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
-            attempts += 1
-
-        # Show frame with score
+                    print("Decreasing focus...")
+                
+                # Capture new frame and recalculate score
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
+                print(f"New hybrid score: {hybrid_score:.2f}")
+                
+                # Check if we're getting closer to threshold
+                if hybrid_score > prev_score:
+                    # Score improved, keep current direction
+                    print(f"Score improved! Continuing to {direction}...")
+                else:
+                    # Score got worse, reverse direction
+                    direction = "decrease" if direction == "increase" else "increase"
+                    print(f"Score worsened. Switching to {direction}...")
+                
+                prev_score = hybrid_score
+                attempts += 1
+            
+            print(f"Focus adjustment complete. Final score: {hybrid_score:.2f}")
+        else:
+            print(f"Focus already above threshold: {hybrid_score:.2f}")
+        
+        # Display frame with score
         display_frame = frame.copy()
         cv2.putText(display_frame, f"Focus: {hybrid_score:.2f}", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv2.imshow("Focus Monitor", display_frame)
-
+        
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
+    
     cap.release()
     cv2.destroyAllWindows()
-
 
 
 
