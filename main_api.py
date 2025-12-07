@@ -706,7 +706,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
 
         # Show the frames
         cv2.imshow("RGB Stream", frame_rgb)
-        cv2.imshow("Thermal Stream", frame_ther)
+        #cv2.imshow("Thermal Stream", frame_ther)
 
             
 
