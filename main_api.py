@@ -622,8 +622,7 @@ backup  = []
 
 memo  = {}
 
-
-
+track_only_id = None
 
 def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     print("start process ... ")
@@ -649,9 +648,11 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
             frame_thc = frame_ther.copy()
 
             start_time = time.time()
-            if last_detection_time and (time.time() - last_detection_time) < 10:
+            time_since_detection = time.time() - last_detection_time
+            if last_detection_time > 0 and time_since_detection < 10:
+                print(f"Skipping frame (last detection: {time_since_detection:.1f}s ago)")
                 last_detection_time = time.time()
-                print("skipping frame due to no detections...")
+                time.sleep(0.1)  # Add small delay to avoid CPU spinning
                 continue
 
 
