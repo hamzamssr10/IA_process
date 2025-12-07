@@ -675,10 +675,12 @@ def crop(frame, box):
 
 backup  = []
 
+memo  = {}
 
 def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     global stop_flag
     global backup
+    global memo 
 
     
     cap_rgb = cv2.VideoCapture(rtsp_RGB)
@@ -717,7 +719,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         if len(final_results) > 0 :
             # send events
             data_event = process_data(final_results)
-            backup = data_event + backup
+            #backup = data_event + backup
 
             STATIC_DATA = {"len" : len(data_event) , "data" : data_event}
             print(STATIC_DATA)
@@ -733,8 +735,20 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                     BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
 
                 box =  list(map(int , object["bbox"]))
-                # box = list(map(int, final_results[0]["bbox"]))
-                print("box :",box)
+                x1, y1, x2, y2 = box
+                
+                x_c, y_c = int((x1 + x2) / 2), int((y1 + y2) / 2)
+
+                track_key = hex(track_id_t)
+                
+                if track_key not in memo:
+                    memo[track_key] = []
+                
+                memo[track_key].append((x_c, y_c))
+
+                if len(memo[track_key]) > 50:
+                    memo[track_key].pop(0)
+
                 cropped_rgb = crop(frame_rgb,box)
                 cropped_ther = crop(frame_ther,box)
 
@@ -744,6 +758,17 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
                 # ---- DRAW BOXES ----
                 x1, y1, x2, y2 = box
+                # drawing the tracking lines ... 
+                for track_key, points in memo.items():
+                if len(points) > 1:
+                    for i in range(1, len(points)):
+                        cv2.line(
+                            frame,
+                            points[i - 1],
+                            points[i],
+                            (0, 255, 0),  
+                            2              
+                        )
                 color = (0, 255, 0)  # green box
                 cv2.rectangle(frame_rgb, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame_rgb, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
@@ -798,18 +823,31 @@ class TrackRequest(BaseModel):
 
 @app.post("/track/object")
 async def track_object(request: TrackRequest):
-    # try:
-        global backup
-        print(request)
-        for obj in backup:
-            if obj["id"] == request.id:
-                return {"status": "found", "object": obj}
+    global memo, backup
+    
+    target_hex = hex(request.id)   # convert int → hex string
+    
+    # Check if this ID exists in memo
+    if target_hex in memo:
+        positions = memo[target_hex]
+        last_pos = positions[-1] if positions else None
         
-        last_status = backup[-1] if backup else None
-        return {"status": "not found", "object": None, "last_status": last_status}
-
-    # except Exception as e:
-    #     print(f"Error tracking object: {e}")
+        return {
+            "status": "found",
+            "id": request.id,
+            "hex_id": target_hex,
+            "last_position": last_pos,
+            "path_length": len(positions)
+        }
+    
+    # Not found → return last global status
+    last_status = backup[-1] if backup else None
+    
+    return {
+        "status": "not found",
+        "id": request.id,
+        "last_status": last_status
+    }
 
 
 if __name__ == "__main__":
