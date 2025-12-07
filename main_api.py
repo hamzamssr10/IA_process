@@ -374,15 +374,15 @@ def _focus_stop(payload):
 def increase_focus(speed: int = 2):
     pyload = {"direction": "focus_in", "speed": speed}
     _focus_move(pyload)
-    #time.sleep(0.4)
-    #_focus_stop(pyload)
+    time.sleep(0.4)
+    _focus_stop(pyload)
 
 
 def decrease_focus(speed: int = 2):
     pyload = {"direction": "focus_out", "speed": speed}
     _focus_move(pyload)
-    #time.sleep(0.4)
-    #_focus_stop(pyload)
+    time.sleep(0.4)
+    _focus_stop(pyload)
 
 
 
@@ -415,18 +415,18 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             attempts = 0
             max_attempts = 50
             
-            while abs(hybrid_score - focus_threshold) > 10: # and attempts < max_attempts:
+            while focus_threshold > hybrid_score : # and attempts < max_attempts:
                 #score_diff = abs(hybrid_score - focus_threshold)
     
                 # Adjust focus based on current direction
                 if direction == "increase":
                     increase_focus()
                     print("Increasing focus...")
-                    time.sleep(0.3)
+                    #time.sleep(0.3)
                 else:
                     decrease_focus()
                     print("Decreasing focus...")
-                    time.sleep(0.3)
+                    #time.sleep(0.3)
                 
                 # Capture new frame and recalculate score
                 ret, frame = cap.read()
