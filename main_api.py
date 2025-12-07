@@ -605,6 +605,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
             # save events 
             for object in final_results:
                 track_id_t = object["id"]
+                cls_name_t = object["class_name"]
 
                 box =  list(map(int , object["bbox"]))
                 x1, y1, x2, y2 = box
@@ -640,7 +641,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                 
                
-                cls_name_t = object["class_name"]
+                
                 key = f"{track_id_t}-{cls_name_t}"
                 if key not in BUFFER_obj:
                     BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
