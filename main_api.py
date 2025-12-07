@@ -347,30 +347,48 @@ def calculate_hybrid_focus(frame, lap_history, ten_history):
 
 FOCUS_SERVER = "http://localhost:3000"
 
-def _focus_move(direction: str, speed: int = 2, time: float = 0.4):
+#def _focus_move(direction: str, speed: int = 2, time: float = 0.4):
+def _focus_move(payload):
     try:
         requests.post(
             f"{FOCUS_SERVER}/focus/cam2/move",
-            json={"direction": direction, "time": time, "speed": speed},
+            json= payload,
             timeout=0.5,
         )
-        print(f"Focus move sent: {direction}, speed: {speed}, time: {time}")
+        print(f"Focus move sent: {payload}")
+    except requests.RequestException as e:
+        print(f"Error sending focus move ({direction}): {e}")
+
+def _focus_stop(payload):
+    try:
+        requests.post(
+            f"{FOCUS_SERVER}/focus/cam2/stop",
+            json=payload},
+            timeout=0.5,
+        )
+        print(f"Focus stop sent: {payload}")
     except requests.RequestException as e:
         print(f"Error sending focus move ({direction}): {e}")
 
 
 def increase_focus(speed: int = 2, time: float = 0.4):
-    _focus_move("focus_in", speed, time)
+    pyload = {"direction": "focus_in", "time": time, "speed": speed}
+    _focus_move(pyload)
+    time.sleep(time)
+    _focus_stop(pyload)
 
 
 def decrease_focus(speed: int = 2, time: float = 0.4):
-    _focus_move("focus_out", speed, time)
+    pyload = {"direction": "focus_out", "time": time, "speed": speed}
+    _focus_move(pyload)
+    time.sleep(time)
+    _focus_stop(pyload)
 
 
 
 
 def monitor_focus(rtsp_link=RTSP_RGP):
-    focus_threshold = 1200
+    focus_threshold = 1800
     print("Start monitoring focus...")
     cap = cv2.VideoCapture(rtsp_link)
     if not cap.isOpened():
@@ -410,11 +428,11 @@ def monitor_focus(rtsp_link=RTSP_RGP):
                 if direction == "increase":
                     increase_focus(speed = speed_act)
                     print("Increasing focus...")
-                    time.sleep(0.3)
+                    #time.sleep(0.3)
                 else:
                     decrease_focus(speed = speed_act)
                     print("Decreasing focus...")
-                    time.sleep(0.3)
+                    #time.sleep(0.3)
                 
                 # Capture new frame and recalculate score
                 ret, frame = cap.read()
@@ -439,14 +457,6 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             print(f"Focus adjustment complete. Final score: {hybrid_score:.2f}")
         else:
             print(f"Focus already above threshold: {hybrid_score:.2f}")
-        
-        # Display frame with score
-        display_frame = frame.copy()
-        cv2.putText(display_frame, f"Focus: {hybrid_score:.2f}", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        cv2.imshow("Focus Monitor", display_frame)
-        
-        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     
     cap.release()
