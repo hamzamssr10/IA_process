@@ -400,11 +400,11 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             while abs(hybrid_score - focus_threshold) > 10: # and attempts < max_attempts:
                 score_diff = abs(hybrid_score - focus_threshold)
                 if score_diff > 800 :
-                        speed_act = 8
-                    elif score_diff > 400 :
-                        speed_act = 5
-                    else:
-                        spee_act = 2
+                    speed_act = 8
+                elif score_diff > 400 :
+                    speed_act = 5
+                else:
+                    spee_act = 2
                 
                 # Adjust focus based on current direction
                 if direction == "increase":
