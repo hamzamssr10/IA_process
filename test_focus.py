@@ -58,7 +58,7 @@ if __name__ == "__main__":
         cv2.imshow("Focus Test", frame)
 
         key = cv2.waitKey(1) & 0xFF
-        elif key == ord('q'):
+        if key == ord('q'):
             focus_stop()
             break
 
