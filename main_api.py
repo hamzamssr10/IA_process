@@ -400,7 +400,7 @@ def monitor_focus(rtsp_link=RTSP_RGP):
         attempts = 0
         max_attempts = 50
 
-        while abs(hybrid_score - focus_threshold) > 10 and attempts < max_attempts:
+        while abs(hybrid_score - focus_threshold) > 10: # and attempts < max_attempts:
             if hybrid_score < focus_threshold:
                 if hybrid_score > prev_score:
                     # Getting closer: keep increasing
