@@ -357,7 +357,7 @@ def _focus_move(payload):
         )
         print(f"Focus move sent: {payload}")
     except requests.RequestException as e:
-        print(f"Error sending focus move ({direction}): {e}")
+        print(f"Error sending focus move : {e}")
 
 def _focus_stop(payload):
     try:
@@ -368,7 +368,7 @@ def _focus_stop(payload):
         )
         print(f"Focus stop sent: {payload}")
     except requests.RequestException as e:
-        print(f"Error sending focus move ({direction}): {e}")
+        print(f"Error sending focus move : {e}")
 
 
 def increase_focus(speed: int = 2, time: float = 0.4):
