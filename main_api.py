@@ -348,31 +348,22 @@ def _focus_move(direction: str):
     try:
         requests.post(
             f"{FOCUS_SERVER}/focus/cam2/move",
-            json={"direction": direction},
+            json={"direction": direction,"time":1,"speed":5},
             timeout=0.5,
         )
+        print(f"Focus move sent: {direction}")
     except requests.RequestException as e:
         print(f"Error sending focus move ({direction}): {e}")
 
 
-def focus_stop():
-    try:
-        requests.post(
-            f"{FOCUS_SERVER}/focus/cam2/stop",
-            timeout=1,
-        )
-    except requests.RequestException as e:
-        print(f"Error sending focus stop: {e}")
-
 
 def increase_focus():
     _focus_move("focus_in")
-    #focus_stop()
-
+    # focus_stop()
 
 def decrease_focus():
     _focus_move("focus_out")
-    #focus_stop()
+    # focus_stop()
 
 
 
