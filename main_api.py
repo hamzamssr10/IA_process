@@ -574,6 +574,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
 
             ret_rgb, frame_rgb = cap_rgb.read()
             ret_ther, frame_ther = cap_ther.read()
+
             frame_rgbc = frame_rgb.copy()
             frame_thc = frame_ther.copy()
 
@@ -584,8 +585,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
             if not ret_rgb and  ret_ther:
                 break
             
-            detected_frame = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
-            yolo_results = track_objects_yolo(model_yolo, detected_frame)
+            yolo_results = track_objects_yolo(model_yolo, frame_rgb)
 
             final_results = yolo_results
 
@@ -747,11 +747,11 @@ async def start_process_focus():
 class TrackRequest(BaseModel):
     id: str
 
-@app.post("/track/object")
-async def track_object(request: TrackRequest):
+@app.post("/track/object/{id}")
+async def track_object(id: str):
     global memo, track_only_id
     
-    target_hex = request.id
+    target_hex =id
     track_only_id = target_hex 
     
     if target_hex in memo:
@@ -763,7 +763,7 @@ async def track_object(request: TrackRequest):
 
         return {
             "status": "found",
-            "id": request.id,
+            "id": id,
             "hex_id": target_hex,
             "last_position": last_pos,
             "path_length": len(positions)
@@ -773,7 +773,7 @@ async def track_object(request: TrackRequest):
     
     return {
         "status": "not found",
-        "id": request.id,
+        "id": id,
         "last_status": last_status
     }
 
