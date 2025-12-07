@@ -396,7 +396,7 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             attempts = 0
             max_attempts = 50
             
-            while hybrid_score > focus_threshold : #and attempts < max_attempts:
+            while hybrid_score < focus_threshold : #and attempts < max_attempts:
                 # Adjust focus based on current direction
                 if direction == "increase":
                     increase_focus()
