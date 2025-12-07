@@ -521,7 +521,7 @@ def make_fake_yolo_results(dets: np.ndarray):
 
 
 model_path = "yolov8s.pt"
-model_yolo = YOLO(model_path)
+model_yolo = YOLO(model_path).to("cuda")
 
 bg_sub = cv2.createBackgroundSubtractorMOG2(
     history=500, varThreshold=25, detectShadows=True
@@ -677,7 +677,16 @@ backup  = []
 
 memo  = {}
 
-
+def grab_latest_frame(cap):
+    # Grab frames until the buffer is empty, return the latest
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            return None
+        if cap.grab():  # Try to grab next frame
+            continue
+        else:
+            return frame
 
 
 def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
@@ -690,8 +699,8 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     cap_ther = cv2.VideoCapture(rtsp_thermique)
 
     while True and not stop_flag:
-        ret_rgb, frame_rgb = cap_rgb.read()
-        ret_ther, frame_ther = cap_ther.read()
+        ret_rgb, frame_rgb = grab_latest_frame(cap_rgb) #.read()
+        ret_ther, frame_ther = grab_latest_frame(cap_ther) #.read()
         print("starting ... ")
         print('ret_rgb',ret_rgb)
         print('frame_ther',ret_ther)
@@ -699,7 +708,87 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         if not ret_rgb and  ret_ther:
             break
         
-        
+        update_buffer(frame_rgb, BUFFER)
+        update_buffer(frame_ther,BUFFER_t)
+
+        save_all = True
+        if save_all:
+            path_all = os.path.join(SAVE_BASE, "all_events")
+            os.makedirs(path_all, exist_ok=True)
+            save_clip(os.path.join(path_all, f"clip_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.mp4"),
+                      BUFFER)
+            save_clip(os.path.join(path_all, f"clip_t_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.mp4"),
+                      BUFFER_t)
+
+        yolo_results = track_objects_yolo(model_yolo, frame_rgb)
+
+        motion_boxes, _ = detect_motion(frame_rgb)
+        motion_only = get_motion_only_objects(motion_boxes, yolo_results)
+        motion_only = motion_only_with_conf(motion_only)
+        motion_only  = np.array(motion_only) if motion_only else np.empty((0,5))
+        fake_results = make_fake_yolo_results(motion_only)
+        tracks = tracker.update(fake_results, frame_rgb)
+
+        final_results = merge_motion_into_yolo(yolo_results, tracks)
+        print("final_results :",final_results)
+        if len(final_results) > 0 :
+            # send events
+            data_event = process_data(final_results)
+            #backup = data_event + backup
+
+            STATIC_DATA = {"len" : len(data_event) , "data" : data_event}
+            print(STATIC_DATA)
+            convert_and_send(STATIC_DATA)
+            
+            # save events 
+            for object in final_results:
+                track_id_t = object["id"]
+                cls_name_t = object["class_name"]
+                key = f"{track_id_t}-{cls_name_t}"
+
+                if key not in BUFFER_obj:
+                    BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
+
+                box =  list(map(int , object["bbox"]))
+                x1, y1, x2, y2 = box
+                
+                x_c, y_c = int((x1 + x2) / 2), int((y1 + y2) / 2)
+
+                track_key = string_to_hex(track_id_t)
+                
+                if track_key not in memo:
+                    memo[track_key] = []
+                
+                memo[track_key].append((x_c, y_c))
+
+                if len(memo[track_key]) > 50:
+                    memo[track_key].pop(0)
+
+                cropped_rgb = crop(frame_rgb,box)
+                cropped_ther = crop(frame_ther,box)
+
+                update_buffer(cropped_rgb, BUFFER_obj[key][0])
+                update_buffer(cropped_ther,BUFFER_obj[key][1])
+
+                #save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
+                # ---- DRAW BOXES ----
+                x1, y1, x2, y2 = box
+                # drawing the tracking lines ... 
+                for track_key, points in memo.items():
+                    if len(points) > 1:
+                        for i in range(1, len(points)):
+                            cv2.line(
+                                frame_rgb,
+                                points[i - 1],
+                                points[i],
+                                (0, 255, 0),  
+                                2              
+                            )
+                color = (0, 255, 0)  # green box
+                cv2.rectangle(frame_rgb, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(frame_rgb, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
 
         # Show the frames
         cv2.imshow("RGB Stream", frame_rgb)
