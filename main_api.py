@@ -520,7 +520,7 @@ def make_fake_yolo_results(dets: np.ndarray):
     return FakeResults(xyxy, conf, cls)
 
 
-model_path = "yolov8s.pt"
+model_path = "yolov8n.pt"
 model_yolo = YOLO(model_path).to("cuda")
 
 bg_sub = cv2.createBackgroundSubtractorMOG2(
@@ -531,7 +531,7 @@ bg_sub = cv2.createBackgroundSubtractorMOG2(
 
 
 def track_objects_yolo(model, frame):
-    results = model.track(frame,conf = 0.3, persist=True, verbose=False)
+    results = model.track(frame,conf = 0.4, persist=True, verbose=False)
     final_output = []
 
     if len(results) == 0:
@@ -566,7 +566,7 @@ bg_sub = cv2.createBackgroundSubtractorMOG2(
     detectShadows=False
 )
 
-def detect_motion(frame, min_area=300):
+def detect_motion(frame, min_area=500):
     fg = bg_sub.apply(frame)
 
     fg = cv2.GaussianBlur(fg, (3, 3), 0)
@@ -763,7 +763,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 update_buffer(cropped_rgb, BUFFER_obj[key][0])
                 update_buffer(cropped_ther,BUFFER_obj[key][1])
 
-                #save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
+                save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
                 # ---- DRAW BOXES ----
                 x1, y1, x2, y2 = box
                 # drawing the tracking lines ... 
