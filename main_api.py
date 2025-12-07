@@ -15,20 +15,23 @@ from threading import Lock
 from collections import deque
 import requests
 import os 
-from typing import List, Optional
+from typing import List, Optional, Set, Tuple
 import time
 import uvicorn
+import asyncio
 
 
-
+# Variables globales
 sock = None
-dest_ip = "255.255.255.255"
 dest_port = 5012
+sending_task = None
+listener_task = None
 
-
+# Liste des clients connectés (IP, Port)
+connected_clients: Set[Tuple[str, int]] = set()
 app = FastAPI()
 
-
+# Modèle Pydantic pour validation
 class ObjectData(BaseModel):
     CLS: str
     ID_TRACK: str
@@ -41,51 +44,76 @@ class DetectionData(BaseModel):
     len: int
     data: List[ObjectData]
 
-def calculate_crc16(data):
+def calculate_checksum(data):
     """
-    Calcule le CRC16 (CCITT) pour validation
+    Calcule le checksum simple (somme des données seulement, sans header ni checksum)
+    Checksum = (Byte2 + Byte3 + Byte4 + ... + ByteN) & 0xFF
 
     Args:
-        data: bytearray des données
+        data: bytearray des données (incluant le header, sans le checksum final)
 
     Returns:
-        int: CRC16 (2 bytes)
+        int: Checksum (1 byte)
     """
-    crc = 0xFFFF
-    polynomial = 0x1021
-
-    for byte in data:
-        crc ^= byte << 8
-        for _ in range(8):
-            if crc & 0x8000:
-                crc = (crc << 1) ^ polynomial
-            else:
-                crc = crc << 1
-            crc &= 0xFFFF
-
-    return crc
+    # Somme de tous les bytes sauf le premier (header 0xFB)
+    # Le checksum ne s'inclut pas lui-même dans le calcul
+    checksum = sum(data[1:]) & 0xFF
+    return checksum
 
 
 
-def start_udp(ip="255.255.255.255", port=5005):
-    """Démarre le socket UDP en mode broadcast"""
-    global sock, dest_ip, dest_port
+def start_udp(port=dest_port):
+    """Démarre le socket UDP"""
+    global sock, dest_port
 
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        dest_ip = ip
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("0.0.0.0", port))
+        sock.setblocking(False)  # Mode non-bloquant pour asyncio
         dest_port = port
-        print(f"✓ UDP Socket démarré en mode BROADCAST pour {dest_ip}:{dest_port}")
+        print(f" UDP Socket démarré sur 0.0.0.0:{dest_port}")
         return True
     except Exception as e:
-        print(f"✗ Erreur démarrage UDP: {e}")
+        print(f" Erreur démarrage UDP: {e}")
         return False
+async def listen_for_clients():
+    """Écoute les messages des clients pour les enregistrer"""
+    global sock, connected_clients
+
+    print(" Écoute des clients sur le port UDP...")
+
+    while True:
+        try:
+            # Utiliser asyncio pour recevoir des données sans bloquer
+            loop = asyncio.get_event_loop()
+            data, addr = await loop.sock_recvfrom(sock, 1024)
+
+            # Enregistrer le client s'il n'est pas déjà dans la liste
+            if addr not in connected_clients:
+                connected_clients.add(addr)
+                print(f" Nouveau client connecté: {addr[0]}:{addr[1]}")
+                print(f" Total clients: {len(connected_clients)}")
+
+            # Si le client envoie "DISCONNECT", le retirer
+            if data.decode("utf-8", errors="ignore").strip() == "DISCONNECT":
+                connected_clients.discard(addr)
+                print(f" Client déconnecté: {addr[0]}:{addr[1]}")
+                print(f" Total clients: {len(connected_clients)}")
+
+        except asyncio.CancelledError:
+            print("\n Tâche d'écoute arrêtée")
+            break
+        except Exception as e:
+            # Ignorer les erreurs de socket non-bloquant
+            if "Resource temporarily unavailable" not in str(e):
+                print(f" Erreur écoute: {e}")
+            await asyncio.sleep(0.1)
 
 
 def convert_and_send(json_data):
     """
-    Convertit les données JSON et envoie via UDP
+    Convertit les données JSON et envoie via UDP à tous les clients connectés
 
     Args:
         json_data: Dictionnaire avec 'len' et 'data'
@@ -93,10 +121,14 @@ def convert_and_send(json_data):
     Returns:
         bool: True si envoi réussi, False sinon
     """
-    global sock, dest_ip, dest_port
+    global sock, connected_clients
 
     if not sock:
-        print("✗ Socket UDP non démarré.")
+        print(" Socket UDP non démarré.")
+        return False
+
+    if not connected_clients:
+        print(" Aucun client connecté - aucun envoi effectué")
         return False
 
     try:
@@ -148,26 +180,40 @@ def convert_and_send(json_data):
             data.append(z_hex & 0xFF)
 
             print(
-                f"  Objet: CLS=0x{cls:02X}, ID=0x{id_track:02X}, X=0x{x_hex:08X}({obj['X']}), Y=0x{y_hex:08X}({obj['Y']}), Z=0x{z_hex:08X}({obj.get('Z', 0)})"
+                f"  • Objet: CLS=0x{cls:02X}, ID=0x{id_track:02X}, X=0x{x_hex:08X}({obj['X']}), Y=0x{y_hex:08X}({obj['Y']}), Z=0x{z_hex:08X}({obj.get('Z', 0)})"
             )
 
-        # Calcul du CRC16 sur toutes les données
-        crc = calculate_crc16(data)
+        # Calcul du Checksum (somme de tous les bytes sauf header, avant d'ajouter le checksum)
+        checksum = calculate_checksum(data)
 
-        # Ajout du CRC à la fin (2 bytes - big endian)
-        data.append((crc >> 8) & 0xFF)  # CRC high byte
-        data.append(crc & 0xFF)  # CRC low byte
+        # Ajout du Checksum à la fin (1 byte)
+        data.append(checksum & 0xFF)
 
-        print(f"\n   CRC16: 0x{crc:04X}")
+        print(f"\n    Checksum: 0x{checksum:02X} (somme: NB_OBJ + données objets)")
 
-        # Envoi
-        sock.sendto(data, (dest_ip, dest_port))
+        # Envoi à tous les clients connectés
+        success_count = 0
+        failed_clients = []
 
-        print(f"\n Envoyé {len(data)} bytes: {' '.join(f'{b:02X}' for b in data)}")
+        for client_addr in list(connected_clients):
+            try:
+                sock.sendto(data, client_addr)
+                success_count += 1
+            except Exception as e:
+                print(f" Erreur envoi vers {client_addr[0]}:{client_addr[1]}: {e}")
+                failed_clients.append(client_addr)
+
+        # Retirer les clients qui ont échoué
+        for failed in failed_clients:
+            connected_clients.discard(failed)
+            print(f" Client retiré (échec envoi): {failed[0]}:{failed[1]}")
+
+        print(f"\n Envoyé {len(data)} bytes à {success_count} client(s)")
+        print(f"    Données: {' '.join(f'{b:02X}' for b in data[:20])}...")
         return True
 
     except Exception as e:
-        print(f"✗ Erreur envoi: {e}")
+        print(f" Erreur envoi: {e}")
         return False
 
 
@@ -177,18 +223,46 @@ def stop_udp():
     if sock:
         sock.close()
         sock = None
-        print("✓ UDP Socket fermé")
+        print(" UDP Socket fermé")
+
+
 
 
 @app.on_event("startup")
 async def startup_event():
-    """Démarre le socket UDP au démarrage de l'API"""
-    start_udp(ip="255.255.255.255", port=5012)
+    """Démarre le socket UDP et les tâches au démarrage de l'API"""
+    global sending_task, listener_task
+
+    start_udp(port=dest_port)
+
+    # Démarrer la tâche d'écoute des clients
+    listener_task = asyncio.create_task(listen_for_clients())
+    print(" Tâche d'écoute des clients démarrée")
+
+    # Démarrer la tâche d'envoi automatique
+    sending_task = asyncio.create_task(auto_send_task())
+    print(" Tâche d'envoi automatique démarrée (toutes les secondes)")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Ferme le socket UDP à l'arrêt de l'API"""
+    """Ferme le socket UDP et arrête les tâches à l'arrêt de l'API"""
+    global sending_task, listener_task
+
+    if listener_task:
+        listener_task.cancel()
+        try:
+            await listener_task
+        except asyncio.CancelledError:
+            pass
+
+    if sending_task:
+        sending_task.cancel()
+        try:
+            await sending_task
+        except asyncio.CancelledError:
+            pass
+
     stop_udp()
 
 
