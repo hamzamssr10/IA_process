@@ -361,12 +361,12 @@ def _focus_move(payload):
 
 def _focus_stop(payload):
     try:
-        requests.post(
+        result = requests.post(
             f"{FOCUS_SERVER}/focus/cam2/stop",
             json=payload,
             timeout=0.5,
         )
-        print(f"Focus stop sent: {payload}")
+        print(f"Focus stop sent: {payload}   {result} ")
     except requests.RequestException as e:
         print(f"Error sending focus move : {e}")
 
