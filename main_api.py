@@ -595,7 +595,7 @@ def process_data(data):
     list_of = []
     for obj in data:
         x1 , y1, x2, y2  = obj["bbox"]
-        X , Y  = int((x1+x2)/2), int((y1 + y2)/2)
+        X , Y  = int((x1*2+x2*2)/2), int((y1*2 + y2*2)/2)
         ID_TRACK =  string_to_hex(obj["id"])
         CLS = hex(obj["class_name"])
         list_of.append({"CLS": CLS, "ID_TRACK":ID_TRACK, "X":X, "Y":Y, "Z": 0})
@@ -616,9 +616,9 @@ backup  = []
 
 memo  = {}
 
+track_only_id = None
 
-
-def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True, ids_to_track = []):
+def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     print("start process ... ")
     global stop_flag, memo, backup, track_only_id
 
@@ -631,82 +631,102 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
     last_detection_time = time.time()
 
     while True and not stop_flag:
-        start_time = time.time()
-        if last_detection_time and (time.time() - last_detection_time) > 20:
-            last_detection_time = time.time()
-            continue
+        # try:
+            ret_rgb, frame_rgb = cap_rgb.read()
+            ret_ther, frame_ther = cap_ther.read()
 
-
-
-        ret_rgb, frame_rgb = cap_rgb.read()
-        ret_ther, frame_ther = cap_ther.read()
-
-        frame_rgb = cv2.resize(frame_rgb, (frame_rgb.shape[1] // 2, frame_rgb.shape[0] // 2))
-        frame_ther = cv2.resize(frame_ther, (frame_ther.shape[1] // 2, frame_ther.shape[0] // 2))
-
-
-        if not ret_rgb and  ret_ther:
-            break
-        
-        detected_frame = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
-        yolo_results = track_objects_yolo(model_yolo, detected_frame)
-
-        final_results = yolo_results
-
-
-        if track_only_id is not None:
-
-            final_results = [obj for obj in final_results if string_to_hex(obj["id"]) == track_only_id]
-            memo = {track_only_id: memo.get(track_only_id, [])}
-
-
-        if len(final_results) > 0 :
-            data_event = process_data(final_results)
-
-            STATIC_DATA = {"len" : len(data_event) , "data" : data_event}
-            print("STATIC_DATA  : ",STATIC_DATA)
-            convert_and_send(STATIC_DATA)
             
-            for object in final_results:
-                track_id_t = object["id"]
-                cls_name_t = object["class_name"]
+            if not ret_rgb and  not ret_ther:
+                break
+            frame_rgbc = frame_rgb.copy()
+            frame_thc = frame_ther.copy()
 
-                box = list(map(int, object["bbox"]))
-                x1, y1, x2, y2 = box
+            start_time = time.time()
+            time_since_detection = time.time() - last_detection_time
+            if last_detection_time > 0 and time_since_detection < 10:
+                print(f"Skipping frame (last detection: {time_since_detection:.1f}s ago)")
+                last_detection_time = time.time()
+                time.sleep(0.1)  # Add small delay to avoid CPU spinning
+                continue
+
+
+            frame_rgb = cv2.resize(frame_rgb, (frame_rgb.shape[1] // 2, frame_rgb.shape[0] // 2))
+            frame_ther = cv2.resize(frame_ther, (frame_ther.shape[1] // 2, frame_ther.shape[0] // 2))
+
+            update_buffer(frame_rgbc, BUFFER)
+            update_buffer(frame_thc,BUFFER_t)
+            
+            yolo_results = track_objects_yolo(model_yolo, frame_rgb)
+
+            final_results = yolo_results
+
+
+            if track_only_id is not None:
+
+                final_results = [obj for obj in final_results if string_to_hex(obj["id"]) == track_only_id]
+                memo = {track_only_id: memo.get(track_only_id, [])}
+
+
+            if len(final_results) > 0 :
+
                 
-                x_c, y_c = (x1 + x2) // 2, (y1 + y2) // 2
+                
+                data_event = process_data(final_results)
 
-                track_key = string_to_hex(track_id_t)
+                STATIC_DATA = {"len" : len(data_event) , "data" : data_event}
+                print("STATIC_DATA  : ",STATIC_DATA)
+                convert_and_send(STATIC_DATA)
+                
+                for object in final_results:
+                    track_id_t = object["id"]
+                    cls_name_t = object["class_name"]
 
-                if track_key not in memo:
-                    memo[track_key] = []
-                memo[track_key].append((x_c, y_c))
+                    box = list(map(int, object["bbox"]))
+                    x1, y1, x2, y2 = box
+                    x1, y1, x2, y2 = x1 * 2, y1 * 2, x2 * 2, y2 * 2
 
-                if len(memo[track_key]) > 50:
-                    memo[track_key].pop(0)
+                    x_c, y_c = (x1 + x2) // 2, (y1 + y2) // 2
 
-                           
-                key = f"{track_id_t}-{cls_name_t}"
-                if key not in BUFFER_obj:
-                    BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
+                    track_key = string_to_hex(track_id_t)
 
-                cropped_rgb = crop(frame_rgb,box)
-                cropped_ther = crop(frame_ther,box)
+                    if track_key not in memo:
+                        memo[track_key] = []
+                    memo[track_key].append((x_c, y_c))
 
-                update_buffer(cropped_rgb, BUFFER_obj[key][0])
-                update_buffer(cropped_ther,BUFFER_obj[key][1])
+                    if len(memo[track_key]) > 50:
+                        memo[track_key].pop(0)
 
-                save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
+                            
+                    key = f"{track_id_t}-{cls_name_t}"
+                    if key not in BUFFER_obj:
+                        BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
+
+                    cropped_rgb = crop(frame_rgbc,[x1, y1, x2, y2])
+                    cropped_ther = crop(frame_thc,[x1, y1, x2, y2])
+
+                    update_buffer(cropped_rgb, BUFFER_obj[key][0])
+                    update_buffer(cropped_ther,BUFFER_obj[key][1])
+
+                    save_data(frame_rgbc, frame_thc, object, BUFFER,BUFFER_t, BUFFER_obj[key])
 
 
-        End_time = time.time()
-        elapsed = End_time - start_time
-        print(elapsed)
+            End_time = time.time()
+            elapsed = End_time - start_time
+            print(elapsed)
+        # except Exception as e:
+        #     print(f"Error processing frame: {e}, reinitializing VideoCapture...")
+        #     cap_rgb.release()
+        #     cap_ther.release()
+        #     cap_rgb = cv2.VideoCapture(rtsp_RGB)
+        #     cap_ther = cv2.VideoCapture(rtsp_thermique)
+        #     continue  
 
 
-    cap_rgb.release()
-    cap_ther.release()
-    cv2.destroyAllWindows()
+            cap_rgb.release()
+            cap_ther.release()
+            cv2.destroyAllWindows()
+
+
 
 
 
@@ -803,11 +823,11 @@ async def start_process_focus():
 class TrackRequest(BaseModel):
     id: str
 
-@app.post("/track/object")
-async def track_object(request: TrackRequest):
+@app.post("/track/object/{id}")
+async def track_object(id: str):
     global memo, track_only_id
     
-    target_hex = request.id
+    target_hex =id
     track_only_id = target_hex 
     
     if target_hex in memo:
@@ -819,7 +839,7 @@ async def track_object(request: TrackRequest):
 
         return {
             "status": "found",
-            "id": request.id,
+            "id": id,
             "hex_id": target_hex,
             "last_position": last_pos,
             "path_length": len(positions)
@@ -829,7 +849,7 @@ async def track_object(request: TrackRequest):
     
     return {
         "status": "not found",
-        "id": request.id,
+        "id": id,
         "last_status": last_status
     }
 
