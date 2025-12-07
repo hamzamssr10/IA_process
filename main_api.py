@@ -344,29 +344,51 @@ def calculate_hybrid_focus(frame, lap_history, ten_history):
 
 FOCUS_SERVER = "http://localhost:3000"
 
-
-def _focus_move(direction: str):
+def _focus_move(direction: str, speed: int = 2, time: float = 0.4):
     try:
         requests.post(
             f"{FOCUS_SERVER}/focus/cam2/move",
-            json={"direction": direction,"time":0.4,"speed":2},
+            json={"direction": direction, "time": time, "speed": speed},
             timeout=0.5,
         )
-        print(f"Focus move sent: {direction}")
+        print(f"Focus move sent: {direction}, speed: {speed}, time: {time}")
     except requests.RequestException as e:
         print(f"Error sending focus move ({direction}): {e}")
 
 
-
-def increase_focus():
-    _focus_move("focus_in")
-    # focus_stop()
-
-def decrease_focus():
-    _focus_move("focus_out")
-    # focus_stop()
+def increase_focus(speed: int = 2, time: float = 0.4):
+    _focus_move("focus_in", speed, time)
 
 
+def decrease_focus(speed: int = 2, time: float = 0.4):
+    _focus_move("focus_out", speed, time)
+
+
+def calculate_focus_params(score_diff):
+    """
+    Calculate speed and time based on how far we are from the threshold.
+    
+    Args:
+        score_diff: Difference between current score and threshold (absolute value)
+    
+    Returns:
+        tuple: (speed, time, sleep_time)
+    """
+    if score_diff > 800:
+        # Very far - move fast
+        return 5, 0.6, 0.5
+    elif score_diff > 400:
+        # Far - move medium-fast
+        return 4, 0.5, 0.4
+    elif score_diff > 200:
+        # Medium distance - move medium
+        return 3, 0.4, 0.3
+    elif score_diff > 100:
+        # Close - move slow
+        return 2, 0.3, 0.25
+    else:
+        # Very close - move very slow
+        return 1, 0.2, 0.2
 
 
 def monitor_focus(rtsp_link=RTSP_RGP):
@@ -395,18 +417,26 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             prev_score = hybrid_score
             direction = "increase"  # Start by increasing
             attempts = 0
-            max_attempts = 50
+            max_attempts = 100
             
-            while hybrid_score < focus_threshold : #and attempts < max_attempts:
-                # Adjust focus based on current direction
+            while hybrid_score < focus_threshold and attempts < max_attempts:
+                # Calculate how far we are from threshold
+                score_diff = abs(hybrid_score - focus_threshold)
+                
+                # Get dynamic parameters based on distance
+                speed, move_time, sleep_time = calculate_focus_params(score_diff)
+                
+                print(f"Distance to threshold: {score_diff:.2f} -> speed: {speed}, time: {move_time}")
+                
+                # Adjust focus based on current direction with dynamic parameters
                 if direction == "increase":
-                    increase_focus()
-                    time.sleep(0.3)
-                    print("Increasing focus...")
+                    increase_focus(speed, move_time)
+                    time.sleep(sleep_time)
+                    print(f"Increasing focus (speed: {speed})...")
                 else:
-                    decrease_focus()
-                    time.sleep(0.3)
-                    print("Decreasing focus...")
+                    decrease_focus(speed, move_time)
+                    time.sleep(sleep_time)
+                    print(f"Decreasing focus (speed: {speed})...")
                 
                 # Capture new frame and recalculate score
                 ret, frame = cap.read()
@@ -435,6 +465,7 @@ def monitor_focus(rtsp_link=RTSP_RGP):
     
     cap.release()
     cv2.destroyAllWindows()
+
 
 
 
