@@ -1,7 +1,10 @@
 import requests
+import cv2
+import time
 
 # Server URL
 FOCUS_SERVER = "http://localhost:3000"
+RTSP_LINK = "rtsp://admin:2899100*-+@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0"  # <-- replace with your RTSP URL
 
 def _focus_move(direction: str):
     try:
@@ -33,23 +36,35 @@ def decrease_focus():
     # focus_stop()
 
 # -------------------------------
-# Example test
+# Test with video display
 # -------------------------------
 if __name__ == "__main__":
-    import time
+    cap = cv2.VideoCapture(RTSP_LINK)
+    if not cap.isOpened():
+        print("Error: Camera not accessible.")
+        exit()
 
-    print("Testing focus control...")
+    print("Press 'i' to increase focus, 'd' to decrease, 'q' to quit.")
 
-    print("Increasing focus for 2 seconds...")
-    increase_focus()
-    time.sleep(2)
-    focus_stop()
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("No frame received.")
+            break
 
-    time.sleep(1)
+        # Show the frame
+        cv2.imshow("Focus Test", frame)
 
-    print("Decreasing focus for 2 seconds...")
-    decrease_focus()
-    time.sleep(2)
-    focus_stop()
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('i'):
+            print("Increasing focus...")
+            increase_focus()
+        elif key == ord('d'):
+            print("Decreasing focus...")
+            decrease_focus()
+        elif key == ord('q'):
+            focus_stop()
+            break
 
-    print("Test finished.")
+    cap.release()
+    cv2.destroyAllWindows()
