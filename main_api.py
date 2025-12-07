@@ -689,6 +689,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     while True and not stop_flag:
         ret_rgb, frame_rgb = cap_rgb.read()
         ret_ther, frame_ther = cap_ther.read()
+        print("starting ... ")
 
         if not ret_rgb and ret_ther:
             break
