@@ -363,7 +363,7 @@ def _focus_stop(payload):
     try:
         requests.post(
             f"{FOCUS_SERVER}/focus/cam2/stop",
-            json=payload},
+            json=payload,
             timeout=0.5,
         )
         print(f"Focus stop sent: {payload}")
