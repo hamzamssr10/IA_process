@@ -624,6 +624,7 @@ memo  = {}
 
 
 
+
 def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True, ids_to_track = []):
     print("start process ... ")
     global stop_flag, memo, backup, track_only_id
@@ -637,14 +638,15 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
     last_detection_time = time.time()
 
     while True and not stop_flag:
-        try:
+        # try:
             start_time = time.time()
             if last_detection_time and (time.time() - last_detection_time) > 20:
                 last_detection_time = time.time()
                 print("skipping frame due to no detections...")
                 continue
 
-
+            if not ret_rgb and  ret_ther:
+                break
 
             ret_rgb, frame_rgb = cap_rgb.read()
             ret_ther, frame_ther = cap_ther.read()
@@ -659,8 +661,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
             update_buffer(frame_thc,BUFFER_t)
 
             
-            if not ret_rgb and  ret_ther:
-                break
+           
             
             yolo_results = track_objects_yolo(model_yolo, frame_rgb)
 
@@ -719,13 +720,18 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
             End_time = time.time()
             elapsed = End_time - start_time
             print(elapsed)
-        except Exception as e:
-            print(f"Error processing frame: {e}, reinitializing VideoCapture...")
+        # except Exception as e:
+        #     print(f"Error processing frame: {e}, reinitializing VideoCapture...")
+        #     cap_rgb.release()
+        #     cap_ther.release()
+        #     cap_rgb = cv2.VideoCapture(rtsp_RGB)
+        #     cap_ther = cv2.VideoCapture(rtsp_thermique)
+        #     continue  
+
+
             cap_rgb.release()
             cap_ther.release()
-            cap_rgb = cv2.VideoCapture(rtsp_RGB)
-            cap_ther = cv2.VideoCapture(rtsp_thermique)
-            continue  
+            cv2.destroyAllWindows()
 
 
         cap_rgb.release()
