@@ -701,26 +701,18 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         if not ret_rgb and  ret_ther:
             break
         
-        update_buffer(frame_rgb, BUFFER)
-        update_buffer(frame_ther,BUFFER_t)
+        
 
-        save_all = True
-        if save_all:
-            path_all = os.path.join(SAVE_BASE, "all_events")
-            os.makedirs(path_all, exist_ok=True)
-            save_clip(os.path.join(path_all, f"clip_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.mp4"),
-                      BUFFER)
-            save_clip(os.path.join(path_all, f"clip_t_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.mp4"),
-                      BUFFER_t)
+        
 
         yolo_results = track_objects_yolo(model_yolo, frame_rgb)
 
-        motion_boxes, _ = detect_motion(frame_rgb)
-        motion_only = get_motion_only_objects(motion_boxes, yolo_results)
-        motion_only = motion_only_with_conf(motion_only)
-        motion_only  = np.array(motion_only) if motion_only else np.empty((0,5))
+        #motion_boxes, _ = detect_motion(frame_rgb)
+        #motion_only = get_motion_only_objects(motion_boxes, yolo_results)
+        #motion_only = motion_only_with_conf(motion_only)
+        #motion_only  = np.array(motion_only) if motion_only else np.empty((0,5))
         fake_results = make_fake_yolo_results(motion_only)
-        tracks = tracker.update(fake_results, frame_rgb)
+        tracks = [] #tracker.update(fake_results, frame_rgb)
 
         final_results = merge_motion_into_yolo(yolo_results, tracks)
         print("final_results :",final_results)
@@ -797,6 +789,44 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     cap_ther.release()
     cv2.destroyAllWindows()
 
+CAM_CENTER_X = 640 
+CAM_CENTER_Y = 360
+THRESH_X = 50      
+THRESH_Y = 50
+
+def move_camera_to_track(target_pos):
+    x, y = target_pos
+    dx = x - CAM_CENTER_X
+    dy = y - CAM_CENTER_Y
+
+    # Horizontal movement
+    if abs(dx) > THRESH_X:
+        direction_x = "right" if dx > 0 else "left"
+        speed_x = min(abs(dx)//10, 8)
+        send_ptz_request(direction_x, speed_x)
+
+    # Vertical movement
+    if abs(dy) > THRESH_Y:
+        direction_y = "down" if dy > 0 else "up"
+        speed_y = min(abs(dy)//10, 8)
+        send_ptz_request(direction_y, speed_y)
+
+def send_ptz_request(direction, speed=8, channel=0, duration=200):
+    url = f"{FOCUS_SERVER}/ptz/cam2/move" 
+    payload = {
+        "direction": direction,
+        "speed": speed,
+        "channel": channel,
+        "duration": duration
+    }
+    try:
+        r = requests.post(url, json=payload, timeout=0.5)
+        if r.status_code != 200:
+            print(f"PTZ request failed: {r.status_code}")
+    except Exception as e:
+        print(f"PTZ request error: {e}")
+
+
 
 
 @app.post("/detection/start")
@@ -835,13 +865,17 @@ class TrackRequest(BaseModel):
 async def track_object(request: TrackRequest):
     global memo, backup
     
-    target_hex = hex(request.id)   # convert int → hex string
+    target_hex = request.id
     
     # Check if this ID exists in memo
     if target_hex in memo:
         positions = memo[target_hex]
         last_pos = positions[-1] if positions else None
-        
+
+        # Move camera if object is far from center
+        if last_pos:
+            move_camera_to_track(last_pos)
+
         return {
             "status": "found",
             "id": request.id,
