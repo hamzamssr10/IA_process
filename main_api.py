@@ -371,15 +371,15 @@ def _focus_stop(payload):
         print(f"Error sending focus move : {e}")
 
 
-def increase_focus(speed: int = 2, time: float = 0.4):
-    pyload = {"direction": "focus_in", "time": time, "speed": speed}
+def increase_focus(speed: int = 2, time_: float = 0.4):
+    pyload = {"direction": "focus_in", "time": time_, "speed": speed}
     _focus_move(pyload)
     time.sleep(0.4)
     _focus_stop(pyload)
 
 
-def decrease_focus(speed: int = 2, time: float = 0.4):
-    pyload = {"direction": "focus_out", "time": time, "speed": speed}
+def decrease_focus(speed: int = 2, time_: float = 0.4):
+    pyload = {"direction": "focus_out", "time": time_, "speed": speed}
     _focus_move(pyload)
     time.sleep(0.4)
     _focus_stop(pyload)
