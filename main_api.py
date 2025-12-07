@@ -773,9 +773,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 cv2.rectangle(frame_rgb, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame_rgb, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-                cv2.rectangle(frame_ther, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(frame_ther, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
 
         # Show the frames
         cv2.imshow("RGB Stream", frame_rgb)
