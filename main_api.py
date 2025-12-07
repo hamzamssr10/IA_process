@@ -691,6 +691,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
 
     while True and not stop_flag:
         print("start ... ")
+        start_time = time.time()
         ret_rgb, frame_rgb = cap_rgb.read()
         ret_ther, frame_ther = cap_ther.read()
         print("starting ... ")
@@ -783,6 +784,8 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
 
 
         # Show the frames
+        End_time = time.time()
+        print(End_time -  start_time)
         cv2.imshow("RGB Stream", frame_rgb)
         #cv2.imshow("Thermal Stream", frame_ther)
         if cv2.waitKey(1) & 0xFF == 27:
