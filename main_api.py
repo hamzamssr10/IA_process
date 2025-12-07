@@ -494,44 +494,16 @@ def monitor_focus(rtsp_link=RTSP_RGP):
     cap.release()
     cv2.destroyAllWindows()
 
-class FakeResults:
-    def __init__(self, xyxy, conf, cls):
-        self.xyxy = xyxy
-        self.xywh = np.zeros_like(xyxy)
-        self.xywh[:,0] = xyxy[:,0]
-        self.xywh[:,1] = xyxy[:,1]
-        self.xywh[:,2] = xyxy[:,2] - xyxy[:,0]
-        self.xywh[:,3] = xyxy[:,3] - xyxy[:,1]
-        self.conf = conf
-        self.cls = cls
-
-    def __getitem__(self, idx):
-        return FakeResults(self.xyxy[idx], self.conf[idx], self.cls[idx])
-
-    def __len__(self):
-        return len(self.conf)
-
-def make_fake_yolo_results(dets: np.ndarray):
-    if dets.shape[0] == 0:
-        return FakeResults(np.empty((0,4)), np.empty((0,)), np.empty((0,)))
-    xyxy = dets[:, :4]
-    conf = dets[:, 4]
-    cls = np.zeros(len(dets))
-    return FakeResults(xyxy, conf, cls)
-
 
 model_path = "yolov8n.pt"
 model_yolo = YOLO(model_path).to("cuda")
 
-bg_sub = cv2.createBackgroundSubtractorMOG2(
-    history=500, varThreshold=25, detectShadows=True
-)
 
 
 
 
 def track_objects_yolo(model, frame):
-    results = model.track(frame,conf = 0.4, persist=True, verbose=False)
+    results = model.track(frame, conf=0.3, persist=True, verbose=False)
     final_output = []
 
     if len(results) == 0:
@@ -546,12 +518,13 @@ def track_objects_yolo(model, frame):
         bbox = box.xyxy[0].tolist()
         cls = int(box.cls[0])
         track_id = int(box.id[0]) if box.id is not None else -1
-        conf =  float(box.conf[0])
+        conf = float(box.conf[0])
 
         final_output.append({
             "id": str(track_id),
             "class_name": cls,
-            "bbox": bbox
+            "bbox": bbox,
+            "conf": conf
         })
 
     return final_output
@@ -560,93 +533,11 @@ def track_objects_yolo(model, frame):
 
 
 
-bg_sub = cv2.createBackgroundSubtractorMOG2(
-    history=300,
-    varThreshold=32,
-    detectShadows=False
-)
 
-def detect_motion(frame, min_area=500):
-    fg = bg_sub.apply(frame)
-
-    fg = cv2.GaussianBlur(fg, (3, 3), 0)
-
-    _, mask = cv2.threshold(fg, 50, 255, cv2.THRESH_BINARY)
-
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
-
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    motion_boxes = []
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        print(area)
-        if area < min_area:
-            continue
-
-        x, y, w, h = cv2.boundingRect(cnt)
-        x1, y1, x2, y2 = x, y, x + w, y + h
-        motion_boxes.append([x1, y1, x2, y2])
-
-    return motion_boxes, mask
 
 
 process_thread = None
 stop_flag = False
-
-def iou_xyxy(a, b):
-    """Compute IoU where boxes are [x1,y1,x2,y2]"""
-    xA = max(a[0], b[0])
-    yA = max(a[1], b[1])
-    xB = min(a[2], b[2])
-    yB = min(a[3], b[3])
-
-    inter_w = max(0, xB - xA)
-    inter_h = max(0, yB - yA)
-    inter = inter_w * inter_h
-
-    area_a = max(0, a[2] - a[0]) * max(0, a[3] - a[1])
-    area_b = max(0, b[2] - b[0]) * max(0, b[3] - b[1])
-    union = area_a + area_b - inter + 1e-6
-    return inter / union if union > 0 else 0.0
-
-def get_motion_only_objects(motion_boxes, yolo_detections, iou_thresh=0.2):
-    motion_only = []
-    for m_box in motion_boxes:
-        found = False
-        for det in yolo_detections:
-            y_box = det["bbox"]  # already xyxy
-            if iou_xyxy(m_box, y_box) > iou_thresh:
-                found = True
-                break
-        if not found:
-            motion_only.append(m_box)
-    return motion_only
-
-
-
-
-def merge_motion_into_yolo(yolo_results, motion_only):
-
-    for box in motion_only:
-        x1, y1, x2, y2, track_id = box[:5]
-
-        fake_det = {
-            "id": str(track_id) + "m",
-            "class_name": 81,
-            "bbox": [abs(int(x1)), abs(int(y1)),abs( int(x2)), abs(int(y2))],
-        }
-
-        yolo_results.append(fake_det)
-    return yolo_results
-
-
-def motion_only_with_conf(motion_only, conf=0.85):
-    return [[x1, y1, x2, y2, conf] for x1, y1, x2, y2 in motion_only]
-
-
 
 
 def string_to_hex(s):
@@ -690,49 +581,30 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     cap_ther = cv2.VideoCapture(rtsp_thermique)
 
     while True and not stop_flag:
-        print("start ... ")
         start_time = time.time()
         ret_rgb, frame_rgb = cap_rgb.read()
         ret_ther, frame_ther = cap_ther.read()
-        print("starting ... ")
-        print('ret_rgb',ret_rgb)
-        print('frame_ther',ret_ther)
+
 
         if not ret_rgb and  ret_ther:
             break
         
-        
 
-        
+        yolo_results = detect_objects_yolo(model_yolo, frame_rgb)
 
-        yolo_results = track_objects_yolo(model_yolo, frame_rgb)
-
-        #motion_boxes, _ = detect_motion(frame_rgb)
-        #motion_only = get_motion_only_objects(motion_boxes, yolo_results)
-        #motion_only = motion_only_with_conf(motion_only)
-        #motion_only  = np.array(motion_only) if motion_only else np.empty((0,5))
-        #fake_results = make_fake_yolo_results(motion_only)
-        tracks = [] #tracker.update(fake_results, frame_rgb)
-
-        final_results = merge_motion_into_yolo(yolo_results, tracks)
-        print("final_results :",final_results)
+        final_results = yolo_results
         if len(final_results) > 0 :
             # send events
             data_event = process_data(final_results)
             #backup = data_event + backup
 
             STATIC_DATA = {"len" : len(data_event) , "data" : data_event}
-            print(STATIC_DATA)
+            print("STATIC_DATA  : ",STATIC_DATA)
             convert_and_send(STATIC_DATA)
             
             # save events 
             for object in final_results:
-                track_id_t = object["id"]
-                cls_name_t = object["class_name"]
-                key = f"{track_id_t}-{cls_name_t}"
-
-                if key not in BUFFER_obj:
-                    BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
+                
 
                 box =  list(map(int , object["bbox"]))
                 x1, y1, x2, y2 = box
@@ -749,15 +621,8 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 if len(memo[track_key]) > 50:
                     memo[track_key].pop(0)
 
-                cropped_rgb = crop(frame_rgb,box)
-                cropped_ther = crop(frame_ther,box)
-
-                update_buffer(cropped_rgb, BUFFER_obj[key][0])
-                update_buffer(cropped_ther,BUFFER_obj[key][1])
-
-                save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
+                
                 # ---- DRAW BOXES ----
-                x1, y1, x2, y2 = box
                 # drawing the tracking lines ... 
                 for track_key, points in memo.items():
                     if len(points) > 1:
@@ -773,11 +638,28 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 cv2.rectangle(frame_rgb, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame_rgb, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                
+                track_id_t = object["id"]
+                cls_name_t = object["class_name"]
+                key = f"{track_id_t}-{cls_name_t}"
+                if key not in BUFFER_obj:
+                    BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
+                cropped_rgb = crop(frame_rgb,box)
+                cropped_ther = crop(frame_ther,box)
+
+                update_buffer(cropped_rgb, BUFFER_obj[key][0])
+                update_buffer(cropped_ther,BUFFER_obj[key][1])
+
+                #save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
 
 
         # Show the frames
         End_time = time.time()
-        print(End_time -  start_time)
+        elapsed = End_time - start_time
+        print(elapsed)
+        # Ensure each loop takes at least 0.3s
+        if elapsed < 0.3:
+            time.sleep(0.3 - elapsed)
         cv2.imshow("RGB Stream", frame_rgb)
         #cv2.imshow("Thermal Stream", frame_ther)
         if cv2.waitKey(1) & 0xFF == 27:
