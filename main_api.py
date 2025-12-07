@@ -581,7 +581,10 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
             frame_rgb = cv2.resize(frame_rgb, (frame_rgb.shape[1] // 2, frame_rgb.shape[0] // 2))
             frame_ther = cv2.resize(frame_ther, (frame_ther.shape[1] // 2, frame_ther.shape[0] // 2))
 
+            update_buffer(frame_rgbc, BUFFER)
+            update_buffer(frame_thc,BUFFER_t)
 
+            
             if not ret_rgb and  ret_ther:
                 break
             
@@ -597,6 +600,9 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
 
 
             if len(final_results) > 0 :
+
+                
+                
                 data_event = process_data(final_results)
 
                 STATIC_DATA = {"len" : len(data_event) , "data" : data_event}
@@ -633,7 +639,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
                     update_buffer(cropped_rgb, BUFFER_obj[key][0])
                     update_buffer(cropped_ther,BUFFER_obj[key][1])
 
-                    save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
+                    save_data(frame_rgbc, frame_thrc, object, BUFFER,BUFFER_t, BUFFER_obj[key])
 
 
             End_time = time.time()
