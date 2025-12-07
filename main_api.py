@@ -690,7 +690,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     cap_ther = cv2.VideoCapture(rtsp_thermique)
 
     while True and not stop_flag:
-        pprint("start ... ")
+        print("start ... ")
         ret_rgb, frame_rgb = cap_rgb.read()
         ret_ther, frame_ther = cap_ther.read()
         print("starting ... ")
