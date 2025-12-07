@@ -1,5 +1,4 @@
 import requests
-import cv2
 import time
 
 # Server URL
@@ -17,15 +16,15 @@ def _focus_move(direction: str):
     except requests.RequestException as e:
         print(f"Error sending focus move ({direction}): {e}")
 
-def focus_stop():
-    try:
-        requests.post(
-            f"{FOCUS_SERVER}/focus/cam2/stop",
-            timeout=1,
-        )
-        print("Focus stop sent")
-    except requests.RequestException as e:
-        print(f"Error sending focus stop: {e}")
+# def focus_stop():
+#     try:
+#         requests.post(
+#             f"{FOCUS_SERVER}/focus/cam2/stop",
+#             timeout=1,
+#         )
+#         print("Focus stop sent")
+#     except requests.RequestException as e:
+#         print(f"Error sending focus stop: {e}")
 
 def increase_focus():
     _focus_move("focus_in")
@@ -38,29 +37,12 @@ def decrease_focus():
 # -------------------------------
 # Test with video display
 # -------------------------------
-if __name__ == "__main__":
-    cap = cv2.VideoCapture(RTSP_LINK)
-    if not cap.isOpened():
-        print("Error: Camera not accessible.")
-        exit()
-
-    print("Press 'i' to increase focus, 'd' to decrease, 'q' to quit.")
+if _name_ == "_main_":
 
     while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("No frame received.")
-            break
+        
         print("Increasing focus...")
         increase_focus()
-        time.sleep(0.5)
-        # Show the frame
-        cv2.imshow("Focus Test", frame)
-
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q'):
-            focus_stop()
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
+        time.sleep(2)
+        decrease_focus()
+        time.sleep(2)
