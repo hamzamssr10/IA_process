@@ -560,8 +560,16 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
     cap_rgb = cv2.VideoCapture(rtsp_RGB)
     cap_ther = cv2.VideoCapture(rtsp_thermique)
 
+    last_detection_time = time.time()
+
     while True and not stop_flag:
         start_time = time.time()
+        if last_detection_time and (time.time() - last_detection_time) > 20:
+            last_detection_time = time.time()
+            continue
+
+
+
         ret_rgb, frame_rgb = cap_rgb.read()
         ret_ther, frame_ther = cap_ther.read()
 
@@ -572,8 +580,8 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
         if not ret_rgb and  ret_ther:
             break
         
-
-        yolo_results = track_objects_yolo(model_yolo, frame_rgb)
+        detected_frame = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
+        yolo_results = track_objects_yolo(model_yolo, detected_frame)
 
         final_results = yolo_results
 
@@ -581,20 +589,16 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
         if track_only_id is not None:
 
             final_results = [obj for obj in final_results if string_to_hex(obj["id"]) == track_only_id]
-
             memo = {track_only_id: memo.get(track_only_id, [])}
 
 
         if len(final_results) > 0 :
-            # send events
             data_event = process_data(final_results)
-            #backup = data_event + backup
 
             STATIC_DATA = {"len" : len(data_event) , "data" : data_event}
             print("STATIC_DATA  : ",STATIC_DATA)
             convert_and_send(STATIC_DATA)
             
-            # save events 
             for object in final_results:
                 track_id_t = object["id"]
                 cls_name_t = object["class_name"]
@@ -602,11 +606,10 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
                 box = list(map(int, object["bbox"]))
                 x1, y1, x2, y2 = box
                 
-                # Compute center of the box
                 x_c, y_c = (x1 + x2) // 2, (y1 + y2) // 2
 
-                # Update memo for tracking lines
                 track_key = string_to_hex(track_id_t)
+
                 if track_key not in memo:
                     memo[track_key] = []
                 memo[track_key].append((x_c, y_c))
@@ -614,19 +617,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
                 if len(memo[track_key]) > 50:
                     memo[track_key].pop(0)
 
-                # # ---- DRAW TRACKING LINES ----
-                # points = memo[track_key]
-                # if len(points) > 1:
-                #     for i in range(1, len(points)):
-                #         cv2.line(frame_rgb, points[i - 1], points[i], (0, 255, 0), 2)  # Green lines
-
-                # # ---- DRAW BOXES ----
-                # color = (0, 255, 0)  # Green box
-                # cv2.rectangle(frame_rgb, (x1, y1), (x2, y2), color, 2)
-                # cv2.putText(frame_rgb, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
-                #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-                
-               
+                           
                 key = f"{track_id_t}-{cls_name_t}"
                 if key not in BUFFER_obj:
                     BUFFER_obj[key] = [deque(maxlen=150),deque(maxlen=150)]
@@ -640,15 +631,10 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER, track_all = True
                 save_data(frame_rgb, frame_ther, object, BUFFER,BUFFER_t, BUFFER_obj[key])
 
 
-        # Show the frames
         End_time = time.time()
         elapsed = End_time - start_time
         print(elapsed)
-        if elapsed < 0.3:
-            time.sleep(0.3 - elapsed)
-        # cv2.imshow("RGB Stream", frame_rgb)
-        # if cv2.waitKey(1) & 0xFF == 27:
-        #     break
+
 
     cap_rgb.release()
     cap_ther.release()
@@ -675,29 +661,47 @@ def move_camera_to_track(target_pos):
         direction_x = "right" if dx > 0 else "left"
         speed_x = min(abs(dx)//10, 8)
         send_ptz_request(direction_x, speed_x)
+        time.sleep(0.5)
+        send_ptz_request_stop(direction_x, speed_x)
 
     if abs(dy) > THRESH_Y:
         direction_y = "down" if dy > 0 else "up"
         speed_y = min(abs(dy)//10, 8)
         send_ptz_request(direction_y, speed_y)
+        time.sleep(0.5)
+        send_ptz_request_stop(direction_y, speed_y)
 
-def send_ptz_request(direction, speed=8, channel=0, duration=200):
-    url = f"{FOCUS_SERVER}/ptz/cam2/move" 
+
+def send_ptz_request(direction, speed=4):
+    url = f"{FOCUS_SERVER}/ptz/cam1/move"
     payload = {
         "direction": direction,
         "speed": speed,
-        "channel": channel,
-        "duration": duration
+
     }
     try:
         r = requests.post(url, json=payload, timeout=0.5)
         if r.status_code != 200:
             print(f"PTZ request failed: {r.status_code}")
+        else:
+            print(f"PTZ request sent successfully: {direction}")
     except Exception as e:
         print(f"PTZ request error: {e}")
 
-
-
+def send_ptz_request_stop(direction, speed=8):
+    url = f"{FOCUS_SERVER}/ptz/cam2/stop"
+    payload = {
+        "direction": direction,
+        "speed": speed
+    }
+    try:
+        r = requests.post(url, json=payload, timeout=0.5)
+        if r.status_code != 200:
+            print(f"PTZ request failed: {r.status_code}")
+        else:
+            print(f"PTZ request sent successfully: {direction}")
+    except Exception as e:
+        print(f"PTZ request error: {e}")
 
 @app.post("/detection/start")
 async def start_process():
