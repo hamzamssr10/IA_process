@@ -348,7 +348,7 @@ def _focus_move(direction: str):
     try:
         requests.post(
             f"{FOCUS_SERVER}/focus/cam2/move",
-            json={"direction": direction,"time":1,"speed":5},
+            json={"direction": direction,"time":0.8,"speed":1},
             timeout=0.5,
         )
         print(f"Focus move sent: {direction}")
