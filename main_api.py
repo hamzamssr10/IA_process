@@ -376,16 +376,16 @@ def calculate_focus_params(score_diff):
     """
     if score_diff > 800:
         # Very far - move fast
-        return 8, 6, 6.5
+        return 8, 1, 6.5
     elif score_diff > 400:
         # Far - move medium-fast
-        return 5, 4, 5
+        return 5, 1, 5
     elif score_diff > 200:
         # Medium distance - move medium
-        return 3, 3, 4
+        return 3, 1, 4
     elif score_diff > 100:
         # Close - move slow
-        return 3, 2, 3
+        return 3, 1, 3
     else:
         # Very close - move very slow
         return 1, 1, 1.5
@@ -419,7 +419,7 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             attempts = 0
             max_attempts = 100
             
-            while hybrid_score < focus_threshold and attempts < max_attempts:
+            while hybrid_score < focus_threshold: # and attempts < max_attempts:
                 # Calculate how far we are from threshold
                 score_diff = abs(hybrid_score - focus_threshold)
                 
@@ -431,11 +431,11 @@ def monitor_focus(rtsp_link=RTSP_RGP):
                 # Adjust focus based on current direction with dynamic parameters
                 if direction == "increase":
                     increase_focus(speed, move_time)
-                    time.sleep(sleep_time)
+                    time.sleep(1)
                     print(f"Increasing focus (speed: {speed})...")
                 else:
                     decrease_focus(speed, move_time)
-                    time.sleep(sleep_time)
+                    time.sleep(1)
                     print(f"Decreasing focus (speed: {speed})...")
                 
                 # Capture new frame and recalculate score
