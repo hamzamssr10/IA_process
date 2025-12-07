@@ -60,8 +60,6 @@ def calculate_checksum(data):
     checksum = sum(data[1:]) & 0xFF
     return checksum
 
-
-
 def start_udp(port=dest_port):
     """Démarre le socket UDP"""
     global sock, dest_port
@@ -77,6 +75,8 @@ def start_udp(port=dest_port):
     except Exception as e:
         print(f" Erreur démarrage UDP: {e}")
         return False
+
+
 async def listen_for_clients():
     """Écoute les messages des clients pour les enregistrer"""
     global sock, connected_clients
@@ -239,10 +239,6 @@ async def startup_event():
     listener_task = asyncio.create_task(listen_for_clients())
     print(" Tâche d'écoute des clients démarrée")
 
-    # Démarrer la tâche d'envoi automatique
-    sending_task = asyncio.create_task(auto_send_task())
-    print(" Tâche d'envoi automatique démarrée (toutes les secondes)")
-
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -264,7 +260,6 @@ async def shutdown_event():
             pass
 
     stop_udp()
-
 
 
 

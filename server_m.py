@@ -1,3 +1,4 @@
+
 import socket
 import json
 import asyncio
@@ -266,8 +267,8 @@ async def startup_event():
     print(" Tâche d'écoute des clients démarrée")
 
     # Démarrer la tâche d'envoi automatique
-    sending_task = asyncio.create_task(auto_send_task())
-    print(" Tâche d'envoi automatique démarrée (toutes les secondes)")
+    # sending_task = asyncio.create_task(auto_send_task())
+    # print(" Tâche d'envoi automatique démarrée (toutes les secondes)")
 
 
 @app.on_event("shutdown")
@@ -295,15 +296,17 @@ async def shutdown_event():
 @app.get("/")
 async def root():
     """Page d'accueil avec statut"""
-    return {
-        "status": "running",
-        "message": "Envoi automatique UDP avec Checksum simple",
-        "port": dest_port,
-        "connected_clients": len(connected_clients),
-        "clients": [f"{ip}:{port}" for ip, port in connected_clients],
-        "objects": STATIC_DATA["len"],
-        "checksum_method": "Sum of all bytes (except header) & 0xFF",
-    }
+    print(" Accès à la page d'accueil")
+    convert_and_send(STATIC_DATA)
+    # return {
+    #     "status": "running",
+    #     "message": "Envoi automatique UDP avec Checksum simple",
+    #     "port": dest_port,
+    #     "connected_clients": len(connected_clients),
+    #     "clients": [f"{ip}:{port}" for ip, port in connected_clients],
+    #     "objects": STATIC_DATA["len"],
+    #     "checksum_method": "Sum of all bytes (except header) & 0xFF",
+    # }
 
 
 @app.get("/status")
