@@ -374,14 +374,14 @@ def _focus_stop(payload):
 def increase_focus(speed: int = 2, time: float = 0.4):
     pyload = {"direction": "focus_in", "time": time, "speed": speed}
     _focus_move(pyload)
-    time.sleep(time)
+    time.sleep(0.4)
     _focus_stop(pyload)
 
 
 def decrease_focus(speed: int = 2, time: float = 0.4):
     pyload = {"direction": "focus_out", "time": time, "speed": speed}
     _focus_move(pyload)
-    time.sleep(time)
+    time.sleep(0.4)
     _focus_stop(pyload)
 
 
