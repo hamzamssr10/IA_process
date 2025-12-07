@@ -760,15 +760,15 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
                 x1, y1, x2, y2 = box
                 # drawing the tracking lines ... 
                 for track_key, points in memo.items():
-                if len(points) > 1:
-                    for i in range(1, len(points)):
-                        cv2.line(
-                            frame,
-                            points[i - 1],
-                            points[i],
-                            (0, 255, 0),  
-                            2              
-                        )
+                    if len(points) > 1:
+                        for i in range(1, len(points)):
+                            cv2.line(
+                                frame,
+                                points[i - 1],
+                                points[i],
+                                (0, 255, 0),  
+                                2              
+                            )
                 color = (0, 255, 0)  # green box
                 cv2.rectangle(frame_rgb, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame_rgb, f"{cls_name_t}-{track_id_t}", (x1, y1 - 5),
