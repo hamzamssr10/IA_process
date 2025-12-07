@@ -60,6 +60,7 @@ def calculate_checksum(data):
     checksum = sum(data[1:]) & 0xFF
     return checksum
 
+
 def start_udp(port=dest_port):
     """Démarre le socket UDP"""
     global sock, dest_port
@@ -224,8 +225,6 @@ def stop_udp():
         sock.close()
         sock = None
         print(" UDP Socket fermé")
-
-
 
 
 @app.on_event("startup")
