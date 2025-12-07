@@ -781,8 +781,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         cv2.imshow("RGB Stream", frame_rgb)
         #cv2.imshow("Thermal Stream", frame_ther)
         if cv2.waitKey(1) & 0xFF == 27:
-                breakif cv2.waitKey(1) & 0xFF == 27:
-                break
+            break
 
             
 
