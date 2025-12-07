@@ -711,7 +711,7 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
         #motion_only = get_motion_only_objects(motion_boxes, yolo_results)
         #motion_only = motion_only_with_conf(motion_only)
         #motion_only  = np.array(motion_only) if motion_only else np.empty((0,5))
-        fake_results = make_fake_yolo_results(motion_only)
+        #fake_results = make_fake_yolo_results(motion_only)
         tracks = [] #tracker.update(fake_results, frame_rgb)
 
         final_results = merge_motion_into_yolo(yolo_results, tracks)
