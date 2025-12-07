@@ -375,14 +375,14 @@ def increase_focus(speed: int = 2):
     pyload = {"direction": "focus_in", "speed": speed}
     _focus_move(pyload)
     #time.sleep(0.4)
-    _focus_stop(pyload)
+    #_focus_stop(pyload)
 
 
 def decrease_focus(speed: int = 2):
     pyload = {"direction": "focus_out", "speed": speed}
     _focus_move(pyload)
     #time.sleep(0.4)
-    _focus_stop(pyload)
+    #_focus_stop(pyload)
 
 
 
@@ -422,11 +422,11 @@ def monitor_focus(rtsp_link=RTSP_RGP):
                 if direction == "increase":
                     increase_focus()
                     print("Increasing focus...")
-                    #time.sleep(0.3)
+                    time.sleep(0.3)
                 else:
                     decrease_focus()
                     print("Decreasing focus...")
-                    #time.sleep(0.3)
+                    time.sleep(0.3)
                 
                 # Capture new frame and recalculate score
                 ret, frame = cap.read()
