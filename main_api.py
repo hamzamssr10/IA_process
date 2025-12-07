@@ -396,13 +396,15 @@ def monitor_focus(rtsp_link=RTSP_RGP):
             attempts = 0
             max_attempts = 50
             
-            while abs(hybrid_score - focus_threshold) > 10 and attempts < max_attempts:
+            while hybrid_score > focus_threshold : #and attempts < max_attempts:
                 # Adjust focus based on current direction
                 if direction == "increase":
                     increase_focus()
+                    time.sleep(0.3)
                     print("Increasing focus...")
                 else:
                     decrease_focus()
+                    time.sleep(0.3)
                     print("Decreasing focus...")
                 
                 # Capture new frame and recalculate score
