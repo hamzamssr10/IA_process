@@ -10,7 +10,7 @@ def _focus_move(direction: str):
     try:
         requests.post(
             f"{FOCUS_SERVER}/focus/cam2/move",
-            json={"direction": direction},
+            json={"direction": direction,"time":1,"speed":5},
             timeout=0.5,
         )
         print(f"Focus move sent: {direction}")
@@ -51,17 +51,13 @@ if __name__ == "__main__":
         if not ret:
             print("No frame received.")
             break
-
+        print("Increasing focus...")
+        increase_focus()
+        time.sleep(0.5)
         # Show the frame
         cv2.imshow("Focus Test", frame)
 
         key = cv2.waitKey(1) & 0xFF
-        if key == ord('i'):
-            print("Increasing focus...")
-            increase_focus()
-        elif key == ord('d'):
-            print("Decreasing focus...")
-            decrease_focus()
         elif key == ord('q'):
             focus_stop()
             break
