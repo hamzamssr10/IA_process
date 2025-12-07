@@ -671,12 +671,19 @@ def IA_process(rtsp_RGB = RTSP_RGP, rtsp_thermique = RTSP_THER):
     cap_ther.release()
     cv2.destroyAllWindows()
 
-CAM_CENTER_X = 640 
-CAM_CENTER_Y = 360
-THRESH_X = 50      
-THRESH_Y = 50
+
+
+
 
 def move_camera_to_track(target_pos):
+    cap_rgb_ = cv2.VideoCapture(RTSP_RGB)
+    _ , frame_ = cap_rgb_.read()
+    h_rgb, w_rgb = frame_.shape[:2]
+    CAM_CENTER_X = int(w_rgb/2) 
+    CAM_CENTER_Y = int(h_rgb/2)
+    
+    THRESH_X = 50      
+    THRESH_Y = 50
     x, y = target_pos
     dx = x - CAM_CENTER_X
     dy = y - CAM_CENTER_Y
