@@ -376,19 +376,19 @@ def calculate_focus_params(score_diff):
     """
     if score_diff > 800:
         # Very far - move fast
-        return 5, 6, 0.5
+        return 8, 6, 0.5
     elif score_diff > 400:
         # Far - move medium-fast
-        return 4, 4, 0.4
+        return 5, 4, 0.4
     elif score_diff > 200:
         # Medium distance - move medium
-        return 3, 0.9, 0.3
+        return 3, 3, 0.3
     elif score_diff > 100:
         # Close - move slow
-        return 2, 0.3, 0.25
+        return 3, 2, 0.25
     else:
         # Very close - move very slow
-        return 1, 0.2, 0.2
+        return 1, 1, 0.2
 
 
 def monitor_focus(rtsp_link=RTSP_RGP):
