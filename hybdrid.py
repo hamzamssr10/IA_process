@@ -128,4 +128,5 @@ def monitor_focus():
     cv2.destroyAllWindows()
 
 
-
+if __name__ == "__main__":
+    monitor_focus()
