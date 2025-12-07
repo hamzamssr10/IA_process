@@ -426,7 +426,8 @@ def monitor_focus(rtsp_link=RTSP_RGP):
                 else:
                     decrease_focus()
                     print("Decreasing focus...")
-                    #time.sleep(0.3)
+                
+                time.sleep(0.3)
                 
                 # Capture new frame and recalculate score
                 ret, frame = cap.read()
@@ -435,6 +436,15 @@ def monitor_focus(rtsp_link=RTSP_RGP):
                 
                 hybrid_score = calculate_hybrid_focus(frame, lap_history, ten_history)
                 print(f"New hybrid score: {hybrid_score:.2f}")
+                # --- SHOW FRAME DURING ADJUSTMENT ---
+                display_frame = frame.copy()
+                cv2.putText(display_frame, f"Score: {hybrid_score:.2f}", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                cv2.putText(display_frame, f"Dir: {direction}", (10, 70),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+                cv2.imshow("Focus Monitor", display_frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
                 
                 # Check if we're getting closer to threshold
                 if hybrid_score > prev_score:
