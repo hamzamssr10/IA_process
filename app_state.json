@@ -1,0 +1,12 @@
+{
+    "cam1": {
+        "tracking": "stopped",
+        "follow": "stopped",
+        "focus": "stopped"
+    },
+    "cam2": {
+        "tracking": "stopped",
+        "follow": "stopped",
+        "focus": "stopped"
+    }
+}

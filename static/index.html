@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Camera Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .cameras-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .camera-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .camera-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .camera-title {
+            font-size: 1.8em;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .status-disconnected {
+            background: #fee;
+            color: #c33;
+        }
+
+        .status-connecting {
+            background: #ffa;
+            color: #860;
+        }
+
+        .status-connected {
+            background: #efe;
+            color: #3a3;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+            min-height: 360px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-connect {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-connect:hover {
+            background: #45a049;
+        }
+
+        .btn-disconnect {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-disconnect:hover {
+            background: #da190b;
+        }
+
+        .btn-start {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-start:hover {
+            background: #0b7dda;
+        }
+
+        .btn-stop {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-stop:hover {
+            background: #e68900;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .track-controls {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .track-controls label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .track-controls input {
+            width: 100px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        .log-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .log-header {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .log-output {
+            background: #1e1e1e;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 8px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+        }
+
+        .log-error {
+            color: #f44;
+        }
+
+        .log-success {
+            color: #4f4;
+        }
+
+        .log-info {
+            color: #4af;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎥 WebRTC Camera Monitoring System</h1>
+
+        <div class="cameras-grid">
+            <!-- Camera 1 -->
+            <div class="camera-card">
+                <div class="camera-header">
+                    <div class="camera-title">Camera 1 (RGB)</div>
+                    <div class="status-badge status-disconnected" id="status-cam1">Disconnected</div>
+                </div>
+
+                <div class="video-container">
+                    <video id="video-cam1" autoplay playsinline></video>
+                </div>
+
+                <div class="controls">
+                    <button class="btn-connect" onclick="connectCamera('cam1')">Connect Stream</button>
+                    <button class="btn-disconnect" onclick="disconnectCamera('cam1')">Disconnect</button>
+                    <button class="btn-start" onclick="startTracking('cam1')">Start Tracking</button>
+                    <button class="btn-stop" onclick="stopTracking('cam1')">Stop Tracking</button>
+                </div>
+
+                <div class="track-controls">
+                    <label>Track Object ID:</label>
+                    <input type="number" id="track-id-cam1" min="0" max="255" value="0" placeholder="0-255">
+                    <button class="btn-start" onclick="trackObject('cam1')">Track ID</button>
+                    <button class="btn-stop" onclick="stopTrackingObject('cam1')">Stop Track</button>
+                </div>
+            </div>
+
+            <!-- Camera 2 -->
+            <div class="camera-card">
+                <div class="camera-header">
+                    <div class="camera-title">Camera 2 (Thermal)</div>
+                    <div class="status-badge status-disconnected" id="status-cam2">Disconnected</div>
+                </div>
+
+                <div class="video-container">
+                    <video id="video-cam2" autoplay playsinline></video>
+                </div>
+
+                <div class="controls">
+                    <button class="btn-connect" onclick="connectCamera('cam2')">Connect Stream</button>
+                    <button class="btn-disconnect" onclick="disconnectCamera('cam2')">Disconnect</button>
+                    <button class="btn-start" onclick="startTracking('cam2')">Start Tracking</button>
+                    <button class="btn-stop" onclick="stopTracking('cam2')">Stop Tracking</button>
+                </div>
+
+                <div class="track-controls">
+                    <label>Track Object ID:</label>
+                    <input type="number" id="track-id-cam2" min="0" max="255" value="0" placeholder="0-255">
+                    <button class="btn-start" onclick="trackObject('cam2')">Track ID</button>
+                    <button class="btn-stop" onclick="stopTrackingObject('cam2')">Stop Track</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-container">
+            <div class="log-header">📋 System Log</div>
+            <div class="log-output" id="log-output"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:9898';
+        const peerConnections = {};
+
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function updateStatus(cam, status) {
+            const statusEl = document.getElementById(`status-${cam}`);
+            statusEl.className = 'status-badge';
+
+            if (status === 'connected') {
+                statusEl.classList.add('status-connected');
+                statusEl.textContent = 'Connected';
+            } else if (status === 'connecting') {
+                statusEl.classList.add('status-connecting');
+                statusEl.textContent = 'Connecting...';
+            } else {
+                statusEl.classList.add('status-disconnected');
+                statusEl.textContent = 'Disconnected';
+            }
+        }
+
+        async function connectCamera(cam) {
+            try {
+                log(`Connecting to ${cam}...`, 'info');
+                updateStatus(cam, 'connecting');
+
+                const pc = new RTCPeerConnection({
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                });
+
+                peerConnections[cam] = pc;
+
+                pc.ontrack = (e) => {
+                    log(`${cam} video track received`, 'success');
+                    const video = document.getElementById(`video-${cam}`);
+                    video.srcObject = e.streams[0];
+                };
+
+                pc.oniceconnectionstatechange = () => {
+                    log(`${cam} ICE state: ${pc.iceConnectionState}`, 'info');
+                    if (pc.iceConnectionState === 'connected') {
+                        updateStatus(cam, 'connected');
+                    } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                        updateStatus(cam, 'disconnected');
+                    }
+                };
+
+                pc.addTransceiver('video', { direction: 'recvonly' });
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                log(`Sending offer to ${cam}...`, 'info');
+                const response = await fetch(`${API_BASE}/${cam}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/sdp' },
+                    body: offer.sdp
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const answer = await response.json();
+                await pc.setRemoteDescription(new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answer.sdp
+                }));
+
+                log(`${cam} WebRTC connection established!`, 'success');
+
+            } catch (e) {
+                log(`Error connecting ${cam}: ${e.message}`, 'error');
+                updateStatus(cam, 'disconnected');
+            }
+        }
+
+        async function disconnectCamera(cam) {
+            if (peerConnections[cam]) {
+                peerConnections[cam].close();
+                delete peerConnections[cam];
+
+                const video = document.getElementById(`video-${cam}`);
+                video.srcObject = null;
+
+                updateStatus(cam, 'disconnected');
+                log(`${cam} disconnected`, 'info');
+            }
+        }
+
+        async function startTracking(cam) {
+            try {
+                const response = await fetch(`${API_BASE}/ia_process/trackobject/${cam}/start`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                log(`${cam} tracking started: ${data.status}`, 'success');
+            } catch (e) {
+                log(`Error starting tracking for ${cam}: ${e.message}`, 'error');
+            }
+        }
+
+        async function stopTracking(cam) {
+            try {
+                const response = await fetch(`${API_BASE}/ia_process/trackobject/${cam}/stop`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                log(`${cam} tracking stopped: ${data.status}`, 'info');
+            } catch (e) {
+                log(`Error stopping tracking for ${cam}: ${e.message}`, 'error');
+            }
+        }
+
+        async function trackObject(cam) {
+            const idInput = document.getElementById(`track-id-${cam}`);
+            const trackId = parseInt(idInput.value);
+
+            if (isNaN(trackId) || trackId < 0 || trackId > 255) {
+                log(`Invalid track ID for ${cam}. Must be 0-255`, 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/ia_process/trackobject_ids/${cam}/start/${trackId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                log(`${cam} now tracking object ID ${trackId}: ${data.status}`, 'success');
+            } catch (e) {
+                log(`Error tracking object for ${cam}: ${e.message}`, 'error');
+            }
+        }
+
+        async function stopTrackingObject(cam) {
+            try {
+                const response = await fetch(`${API_BASE}/ia_process/trackobject_ids/${cam}/stop`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                log(`${cam} object tracking stopped: ${data.status}`, 'info');
+            } catch (e) {
+                log(`Error stopping object tracking for ${cam}: ${e.message}`, 'error');
+            }
+        }
+
+        log('WebRTC Test Page loaded. Ready to connect!', 'success');
+    </script>
+</body>
+
+</html>

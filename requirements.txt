@@ -1,0 +1,16 @@
+# Web Framework
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+
+# WebRTC
+aiortc==1.6.0
+av==10.0.0
+
+# Computer Vision
+opencv-python==4.8.1.78
+ultralytics==8.0.221
+numpy==1.24.3
+
+# Utilities
+requests==2.31.0
