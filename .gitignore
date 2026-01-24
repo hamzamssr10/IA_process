@@ -1,0 +1,67 @@
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+*.webm
+video.mp4
+
+# Model files
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.h5
+*.pkl
+*.pb
+models/
+model/
+
+# Recordings
+data/recordings/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# State files
+app_state.json

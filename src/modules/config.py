@@ -3,8 +3,8 @@
 # Video sources
 RTSP_URL_1 = "rtsp://localhost:8554/cam2"
 RTSP_URL_2 = "rtsp://localhost:8554/cam1"
-VIDEO_FILE_1 = "video.mp4"
-VIDEO_FILE_2 = "video.mp4"
+VIDEO_FILE_1 = RTSP_URL_1
+VIDEO_FILE_2 = RTSP_URL_2
 
 # Video processing
 TARGET_WIDTH = 640
