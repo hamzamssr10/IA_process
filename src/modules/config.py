@@ -11,17 +11,17 @@ TARGET_WIDTH = 640
 TARGET_HEIGHT = 480
 
 # Model paths
-MODEL_PATH_CAM1 = "models/best_mm.pt"
-MODEL_PATH_CAM2 = "/home/ubuntu/IA_process/best_yarb.pt"
-CLASSES_JSON_PATH = "data/therm_classes.json"
+MODEL_PATH_CAM1 = "/home/ubuntu/IA_process/models/best_v1.pt"
+MODEL_PATH_CAM2 = "/home/ubuntu/IA_process/models/best_te.pt"
+CLASSES_JSON_PATH = "/home/ubuntu/IA_process/data/therm_classes.json"
 
 # Queue sizes
 FRAME_QUEUE_SIZE = 300
 WEBRTC_QUEUE_SIZE = 40
 
 # Detection confidence thresholds
-CONFIDENCE_CAM1 = 0.9
-CONFIDENCE_CAM2 = 0.4
+CONFIDENCE_CAM1 = 0.8
+CONFIDENCE_CAM2 = 0.35
 
 # UDP settings
 UDP_PORT = 52383
