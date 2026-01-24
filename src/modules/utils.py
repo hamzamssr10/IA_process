@@ -20,13 +20,13 @@ def draw_bbox_with_label(
 
     # Dynamic font
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = max(0.4, min(box_h / 120, 1.0))
+    font_scale = max(0.3, min(box_h / 180, 0.7))
     thickness = 1 if font_scale < 0.8 else 2
 
     (tw, th), baseline = cv2.getTextSize(label, font, font_scale, thickness)
 
-    pad_x = int(th * 0.6)
-    pad_y = int(th * 0.5)
+    pad_x = int(th * 0.4)
+    pad_y = int(th * 0.3)
 
     # Label position
     lx1 = x1
